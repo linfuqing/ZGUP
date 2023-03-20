@@ -1,0 +1,933 @@
+using System;
+using System.IO;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Networking;
+
+namespace ZG
+{
+    public class AssetBundleLoader : CustomYieldInstruction
+    {
+        private bool __isRecursive = false;
+        private ulong __offset;
+        private string __path;
+        private AssetBundle __assetBundle = null;
+        private AssetBundleCreateRequest __createRequest = null;
+        private AssetBundleLoader[] __dependencies;
+
+        public Dictionary<string, AssetBundleRequest> assetBundleRequests;
+        public Dictionary<(string, Type), UnityEngine.Object> assets;
+
+        public override bool keepWaiting
+        {
+            get
+            {
+                if (__isRecursive)
+                {
+                    Debug.LogError($"AssetBundle {__path} Is Recursive Dependency!");
+
+                    return false;
+                }
+
+                if (__dependencies != null)
+                {
+                    bool result = false;
+
+                    __isRecursive = true;
+                    foreach (var dependency in __dependencies)
+                    {
+                        if (dependency.keepWaiting)
+                        {
+                            result = true;
+
+                            break;
+                        }
+                    }
+                    __isRecursive = false;
+
+                    if (result)
+                        return true;
+                }
+
+                if (refCount > 0)
+                {
+                    if (isDone)
+                    {
+                        UnityEngine.Assertions.Assert.IsNull(__createRequest);
+
+                        return false;
+                    }
+
+                    if (__createRequest == null)
+                        __createRequest = AssetBundle.LoadFromFileAsync(__path, 0, __offset);
+
+                    return !__createRequest.isDone;
+                }
+                else
+                {
+                    if (isDone)
+                    {
+                        UnityEngine.Assertions.Assert.IsNull(__createRequest);
+
+                        __assetBundle.Unload(true);
+                        UnityEngine.Object.Destroy(__assetBundle);
+
+                        __assetBundle = null;
+                    }
+                    else if (__createRequest != null)
+                    {
+                        UnityEngine.Assertions.Assert.IsNull(__assetBundle);
+
+                        //if (__createRequest.isDone)
+                        {
+                            var assetBundle = __createRequest.assetBundle;
+                            assetBundle.Unload(true);
+                            UnityEngine.Object.Destroy(assetBundle);
+                            __createRequest = null;
+                        }
+                        /*else
+                            return true;*/
+                    }
+
+                    return false;
+                }
+            }
+        }
+
+        public bool isDone => ((object)__assetBundle) != null;
+
+        public int refCount
+        {
+            get;
+
+            private set;
+        }
+
+        public float progress
+        {
+            get
+            {
+                if (__createRequest != null)
+                {
+                    UnityEngine.Assertions.Assert.IsNull(__assetBundle);
+
+                    return __createRequest.progress;
+                }
+
+                if (isDone)
+                    return 1.0f;
+
+                return 0.0f;
+            }
+        }
+
+        public AssetBundle assetBundle => __GetOrLoadSync();
+
+        public AssetBundleLoader(ulong offset, string path, AssetBundleLoader[] dependencies)
+        {
+            __offset = offset;
+            __path = path;
+            __dependencies = dependencies;
+        }
+
+        public int Retain()
+        {
+            if (__isRecursive)
+                return refCount;
+
+            if (__dependencies != null)
+            {
+                __isRecursive = true;
+                foreach (var dependency in __dependencies)
+                    dependency.Retain();
+                __isRecursive = false;
+            }
+
+            return ++refCount;
+        }
+
+        public int Release()
+        {
+            if (__isRecursive)
+                return refCount;
+
+            UnityEngine.Assertions.Assert.IsTrue(refCount > 0);
+            if (--refCount == 0)
+            {
+                if (assets != null)
+                {
+                    /*foreach (var asset in assets.Values)
+                        UnityEngine.Object.DestroyImmediate(asset);*/
+
+                    assets.Clear();
+                }
+
+                if (assetBundleRequests != null)
+                {
+                    /*foreach (var assetBundleRequest in assetBundleRequests.Values)
+                    {
+                        if(assetBundleRequest.isDone)
+                            UnityEngine.Object.DestroyImmediate(assetBundleRequest.asset, true);
+                    }*/
+
+                    assetBundleRequests.Clear();
+                }
+
+                if (isDone)
+                {
+                    UnityEngine.Assertions.Assert.IsNull(__createRequest);
+
+                    __assetBundle.Unload(true);
+                    UnityEngine.Object.Destroy(__assetBundle);
+
+                    __assetBundle = null;
+                }
+                else if (__createRequest != null)
+                {
+                    UnityEngine.Assertions.Assert.IsNull(__assetBundle);
+
+                    //if (__createRequest.isDone)
+                    {
+                        var assetBundle = __createRequest.assetBundle;
+                        if (assetBundle != null)
+                        {
+                            assetBundle.Unload(true);
+                            UnityEngine.Object.Destroy(assetBundle);
+                        }
+
+                        __createRequest = null;
+                    }
+                }
+            }
+
+            if (__dependencies != null)
+            {
+                __isRecursive = true;
+                foreach (var dependency in __dependencies)
+                    dependency.Release();
+                __isRecursive = false;
+            }
+
+            return refCount;
+        }
+
+        public override string ToString()
+        {
+            return $"ABL({__path} : {__offset})";
+        }
+
+        private AssetBundle __GetOrLoadSync()
+        {
+            if (__isRecursive)
+            {
+                Debug.LogError($"{this} Is Recursive Dependency!");
+
+                return null;
+            }
+
+            if (__dependencies != null)
+            {
+                __isRecursive = true;
+                foreach (var dependency in __dependencies)
+                    dependency.__GetOrLoadSync();
+                __isRecursive = false;
+            }
+
+            if (__createRequest != null)
+            {
+                UnityEngine.Assertions.Assert.IsFalse(isDone);
+
+                __assetBundle = __createRequest.assetBundle;
+
+                __createRequest = null;
+            }
+
+            if (!isDone)
+                __assetBundle = AssetBundle.LoadFromFile(__path, 0, __offset);
+
+            return __assetBundle;
+        }
+    }
+
+    public struct AssetBundleLoader<T> : IEnumerator where T : UnityEngine.Object
+    {
+        public readonly bool IsManaged;
+
+        public readonly string AssetName;
+
+        public readonly AssetBundleLoader Loader;
+
+        public T value
+        {
+            get
+            {
+                __GetOrLoad(true, out T value);
+
+                return value;
+            }
+        }
+
+        public AssetBundleLoader(string bundleName, string assetName, AssetManager manager)
+        {
+            IsManaged = false;
+
+            AssetName = assetName;
+
+            Loader = manager.GetOrCreateAssetBundleLoader(bundleName);
+
+            if (Loader != null)
+                Loader.Retain();
+        }
+
+        public AssetBundleLoader(string assetName, AssetBundleLoader loader)
+        {
+            IsManaged = true;
+
+            AssetName = assetName;
+
+            Loader = loader;
+        }
+
+        public bool Unload()
+        {
+            if (IsManaged)
+                return false;
+
+            if (Loader.Release() == 0)
+                return true;
+
+            UnityEngine.Object asset = null;
+            if (Loader.assetBundleRequests != null && Loader.assetBundleRequests.TryGetValue(AssetName, out var assetBundleRequest))
+            {
+                asset = assetBundleRequest.asset;
+
+                Loader.assetBundleRequests.Remove(AssetName);
+            }
+            else if (Loader.assets != null && Loader.assets.TryGetValue((AssetName, typeof(T)), out asset))
+            {
+                //UnityEngine.Object.DestroyImmediate(asset);
+
+                Loader.assets.Remove((AssetName, typeof(T)));
+            }
+
+            if (!(asset is GameObject))
+                Resources.UnloadAsset(asset);
+
+            /*var gameObject = asset as GameObject;
+            if (gameObject != null)
+                UnityEngine.Object.DestroyImmediate(gameObject);*/
+
+            return false;
+        }
+
+        public void Dispose()
+        {
+            if (IsManaged)
+                return;
+
+            Loader.Release();
+        }
+
+        public bool MoveNext() => __GetOrLoad(false, out _);
+
+        private bool __GetOrLoad(bool isSync, out T value)
+        {
+            if (Loader == null)
+            {
+                value = null;
+
+                return false;
+            }
+
+            if (Loader.assets != null && Loader.assets.TryGetValue((AssetName, typeof(T)), out var target))
+            {
+                value = target as T;
+
+                return false;
+            }
+
+            if (Loader.assetBundleRequests != null && Loader.assetBundleRequests.TryGetValue(AssetName, out var request))
+            {
+                if (request != null && (request.isDone || isSync))
+                {
+                    Loader.assetBundleRequests.Remove(AssetName);
+
+                    var asset = request.asset;
+                    if (asset != null)
+                    {
+                        if (Loader.assets == null)
+                            Loader.assets = new Dictionary<(string, Type), UnityEngine.Object>();
+
+                        Loader.assets.Add((AssetName, typeof(T)), asset);
+                    }
+
+                    value = asset as T;
+
+                    return false;
+                }
+            }
+            else if (isSync)
+            {
+                var assetBundle = Loader.assetBundle;
+                value = assetBundle == null ? null : assetBundle.LoadAsset<T>(AssetName);
+                if (value != null)
+                {
+                    if (Loader.assets == null)
+                        Loader.assets = new Dictionary<(string, Type), UnityEngine.Object>();
+
+                    Loader.assets.Add((AssetName, typeof(T)), value);
+                }
+
+                return false;
+            }
+            else if (!Loader.keepWaiting)
+            {
+                if (Loader.refCount < 1)
+                {
+                    value = null;
+
+                    return false;
+                }
+
+                var assetBundle = Loader.assetBundle;
+
+                request = assetBundle == null ? null : assetBundle.LoadAssetAsync<T>(AssetName);
+                if (request == null)
+                {
+                    Debug.LogError($"Asset {AssetName} loaded fail.");
+
+                    value = null;
+
+                    return false;
+                }
+
+                if (Loader.assetBundleRequests == null)
+                    Loader.assetBundleRequests = new Dictionary<string, AssetBundleRequest>();
+
+                Loader.assetBundleRequests.Add(AssetName, request);
+            }
+
+            value = null;
+
+            return true;
+        }
+
+        void IEnumerator.Reset()
+        {
+            throw new NotSupportedException();
+        }
+
+        object IEnumerator.Current => null;
+    }
+
+    public class AssetBundlePool : IDisposable
+    {
+        public readonly AssetManager Manager;
+
+        public HashSet<string> __bundleNames;
+
+        public AssetBundlePool(AssetManager manager)
+        {
+            Manager = manager;
+        }
+
+        public void Clear()
+        {
+            if (__bundleNames == null)
+                return;
+
+            foreach (var bundleName in __bundleNames)
+                Manager.UnloadAssetBundle(bundleName);
+
+            __bundleNames.Clear();
+        }
+
+        public void Dispose()
+        {
+            if (__bundleNames == null)
+                return;
+
+            foreach(var bundleName in __bundleNames)
+                Manager.UnloadAssetBundle(bundleName);
+
+            __bundleNames = null;
+        }
+
+        public AssetBundleLoader<T> Load<T>(string bundleName, string assetName) where T : UnityEngine.Object
+        {
+            var loader = Manager.GetOrCreateAssetBundleLoader(bundleName);
+
+            if (__bundleNames == null)
+                __bundleNames = new HashSet<string>();
+
+            if (__bundleNames.Add(bundleName))
+                loader.Retain();
+
+            return new AssetBundleLoader<T>(assetName, loader);
+        }
+
+        public T LoadSync<T>(string bundleName, string assetName) where T : UnityEngine.Object
+        {
+            return Load<T>(bundleName, assetName).value;
+        }
+    }
+
+    public partial class AssetManager
+    {
+        private Dictionary<string, AssetBundleLoader> __assetBundleLoaders;
+
+        public AssetBundleLoader GetOrCreateAssetBundleLoader(string name)
+        {
+            if (__assetBundleLoaders != null && __assetBundleLoaders.TryGetValue(name, out var assetBundleLoader))
+                return assetBundleLoader;
+            else
+            {
+                if (GetAssetPath(name, out var asset, out ulong fileOffset, out string filePath))
+                {
+                    int numDependencies = asset.data.dependencies == null ? 0 : asset.data.dependencies.Length;
+                    AssetBundleLoader[] dependencies = numDependencies > 0 ? new AssetBundleLoader[numDependencies] : null;
+
+                    assetBundleLoader = new AssetBundleLoader(
+                        fileOffset,
+                        filePath,
+                        dependencies);
+
+                    if (__assetBundleLoaders == null)
+                        __assetBundleLoaders = new Dictionary<string, AssetBundleLoader>();
+
+                    __assetBundleLoaders[name] = assetBundleLoader;
+
+                    for (int i = 0; i < numDependencies; ++i)
+                        dependencies[i] = GetOrCreateAssetBundleLoader(asset.data.dependencies[i]);
+
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(name))
+                        Debug.LogError($"Load Asset Bundle {name} Fail.");
+
+                    assetBundleLoader = null;
+                }
+            }
+
+            return assetBundleLoader;
+        }
+
+        public bool Unload<T>(string fileName, string assetName)
+        {
+            if (__assetBundleLoaders != null && __assetBundleLoaders.TryGetValue(fileName, out var assetBundleLoader))
+            {
+                if (assetBundleLoader.Release() == 0)
+                    return true;
+
+                UnityEngine.Object asset = null;
+                if (assetBundleLoader.assetBundleRequests != null && assetBundleLoader.assetBundleRequests.TryGetValue(assetName, out var assetBundleRequest))
+                {
+                    asset = assetBundleRequest.asset;
+
+                    assetBundleLoader.assetBundleRequests.Remove(assetName);
+                }
+                else if (assetBundleLoader.assets != null && assetBundleLoader.assets.TryGetValue((assetName, typeof(T)), out asset))
+                {
+                    //UnityEngine.Object.DestroyImmediate(asset);
+
+                    assetBundleLoader.assets.Remove((assetName, typeof(T)));
+                }
+
+                if(!(asset is GameObject))
+                    Resources.UnloadAsset(asset);
+
+                /*var gameObject = asset as GameObject;
+                if (gameObject != null)
+                    UnityEngine.Object.DestroyImmediate(gameObject);*/
+            }
+
+            return false;
+        }
+
+        public bool UnloadAssetBundle(string name)
+        {
+            if (__assetBundleLoaders != null && __assetBundleLoaders.TryGetValue(name, out var assetBundleLoader))
+                return assetBundleLoader.Release() == 0;
+
+            return false;
+        }
+
+        public AssetBundle LoadAssetBundle(string name)
+        {
+            var assetBundleLoader = GetOrCreateAssetBundleLoader(name);
+            if (assetBundleLoader == null)
+            {
+                /*if(!string.IsNullOrEmpty(name))
+                    Debug.LogError($"Load Asset Bundle {name} Fail.");*/
+
+                return null;
+            }
+
+            assetBundleLoader.Retain();
+            return assetBundleLoader.assetBundle;
+        }
+
+        public T Load<T>(string fileName, string assetName) where T : UnityEngine.Object
+        {
+            if (string.IsNullOrWhiteSpace(assetName))
+                return null;
+
+            var assetBundleLoader = GetOrCreateAssetBundleLoader(fileName);
+            if (assetBundleLoader == null)
+                return null;
+
+            assetBundleLoader.Retain();
+
+            if (assetBundleLoader.assets != null && assetBundleLoader.assets.TryGetValue((assetName, typeof(T)), out var target))
+                return (T)target;
+
+            T asset = null;
+            if (assetBundleLoader.assetBundleRequests != null && assetBundleLoader.assetBundleRequests.TryGetValue(assetName, out var assetBundleRequest))
+            {
+                if (assetBundleRequest.isDone)
+                    asset = (T)assetBundleRequest.asset;
+
+                assetBundleLoader.assetBundleRequests.Remove(assetName);
+            }
+
+            if (asset == null)
+            {
+                var assetBundle = assetBundleLoader.assetBundle;
+                asset = assetBundle == null ? null : assetBundle.LoadAsset<T>(assetName);
+            }
+
+            if (asset != null)
+            {
+                if (assetBundleLoader.assets == null)
+                    assetBundleLoader.assets = new Dictionary<(string, Type), UnityEngine.Object>();
+
+                assetBundleLoader.assets.Add((assetName, typeof(T)), asset);
+            }
+
+            return asset;
+        }
+
+        public IEnumerator LoadAssetBundleAsync(string name, Action<float> onProgress, Action<AssetBundle> onComplete)
+        {
+            var assetBundleLoader = GetOrCreateAssetBundleLoader(name);
+            if (assetBundleLoader == null)
+            {
+                /*if (!string.IsNullOrEmpty(name))
+                    Debug.LogError($"AssetBundle {name} Load Fail.");*/
+
+                if (onComplete != null)
+                    onComplete(null);
+
+                yield break;
+            }
+
+            assetBundleLoader.Retain();
+            if (onProgress == null)
+                yield return assetBundleLoader;
+            else
+            {
+                while (assetBundleLoader.keepWaiting)
+                {
+                    onProgress(assetBundleLoader.progress);
+
+                    yield return null;
+
+                    if (assetBundleLoader.refCount < 1)
+                        yield break;
+                }
+            }
+
+            if (assetBundleLoader.refCount < 1)
+                yield break;
+
+            if (onComplete != null)
+                onComplete(assetBundleLoader.assetBundle);
+        }
+
+        public IEnumerator Load<T>(
+            string fileName,
+            string assetName,
+            Action<float> onProgress,
+            Action<AssetBundle, T> onComplete) where T : UnityEngine.Object
+        {
+            var assetBundleLoader = GetOrCreateAssetBundleLoader(fileName);
+            if (assetBundleLoader == null)
+            {
+                if (onComplete != null)
+                    onComplete(null, null);
+
+                yield break;
+            }
+
+            assetBundleLoader.Retain();
+
+            AssetBundle assetBundle;
+            if (assetBundleLoader.assets != null && assetBundleLoader.assets.TryGetValue((assetName, typeof(T)), out var target))
+            {
+                if (onComplete != null)
+                {
+                    assetBundle = assetBundleLoader.assetBundle;
+                    /*if(assetBundle == null)
+                        assetBundle = assetBundleLoader.assetBundle;*/
+
+                    onComplete(assetBundle, (T)target);
+                }
+
+                yield break;
+            }
+
+            if (onProgress == null)
+                yield return assetBundleLoader;
+            else
+            {
+                while (assetBundleLoader.keepWaiting)
+                {
+                    onProgress(assetBundleLoader.progress);
+
+                    yield return null;
+
+                    if (assetBundleLoader.refCount < 1)
+                        yield break;
+                }
+            }
+
+            if (assetBundleLoader.refCount < 1)
+                yield break;
+            
+            assetBundle = assetBundleLoader.assetBundle;
+
+            AssetBundleRequest assetBundleRequest;
+            if (assetBundleLoader.assetBundleRequests != null && assetBundleLoader.assetBundleRequests.TryGetValue(assetName, out assetBundleRequest))
+            {
+                /*if (!assetBundleRequest.isDone)
+                    yield return assetBundleRequest;*/
+                while (!assetBundleRequest.isDone)
+                    yield return null;
+            }
+            else
+            {
+                if (assetBundleLoader.assets != null && assetBundleLoader.assets.TryGetValue((assetName, typeof(T)), out target))
+                {
+                    if (onComplete != null)
+                    {
+                        if (assetBundle == null)
+                            assetBundle = assetBundleLoader.assetBundle;
+
+                        onComplete(assetBundle, (T)target);
+                    }
+
+                    yield break;
+                }
+
+                assetBundleRequest = assetBundle == null ? null : assetBundle.LoadAssetAsync<T>(assetName);
+                if (assetBundleRequest == null)
+                    Debug.LogError($"Asset {assetName} from {fileName} loaded fail.");
+                else
+                {
+                    if (assetBundleLoader.assetBundleRequests == null)
+                        assetBundleLoader.assetBundleRequests = new Dictionary<string, AssetBundleRequest>();
+
+                    assetBundleLoader.assetBundleRequests.Add(assetName, assetBundleRequest);
+
+                    yield return assetBundleRequest;
+                }
+            }
+
+            T asset = null;
+            if (assetBundleLoader.assetBundleRequests != null)
+            {
+                if (assetBundleLoader.assetBundleRequests.TryGetValue(assetName, out assetBundleRequest))
+                {
+                    assetBundleLoader.assetBundleRequests.Remove(assetName);
+
+                    asset = (T)assetBundleRequest.asset;
+                }
+                else if (assetBundleLoader.assets != null && assetBundleLoader.assets.TryGetValue((assetName, typeof(T)), out target))
+                {
+                    if (onComplete != null)
+                    {
+                        if (assetBundle == null)
+                            assetBundle = assetBundleLoader.assetBundle;
+
+                        onComplete(assetBundle, (T)target);
+                    }
+
+                    yield break;
+                }
+                else
+                    Debug.LogError($"Asset {assetName} from {fileName} has been destroied.");
+            }
+
+            if (asset != null)
+            {
+                if (assetBundleLoader.assets == null)
+                    assetBundleLoader.assets = new Dictionary<(string, Type), UnityEngine.Object>();
+
+                assetBundleLoader.assets.Add((assetName, typeof(T)), asset);
+            }
+
+            if (onComplete != null)
+                onComplete(assetBundle, asset);
+        }
+
+        public IEnumerator Recompress(DownloadHandler handler)
+        {
+            if (__assets == null)
+                yield break;
+
+            /*BuildCompression method;
+            switch (type)
+            {
+                case AssetType.Uncompressed:
+                    method = BuildCompression.UncompressedRuntime;
+                    break;
+                case AssetType.LZ4:
+                    method = BuildCompression.LZ4Runtime;
+                    break;
+                default:
+                    yield break;
+            }*/
+
+            ulong size = 0UL, totalBytesDownload = 0UL;
+            AssetData data;
+            List<string> assetNames = null;
+            foreach (var pair in __assets)
+            {
+                data = pair.Value.data;
+
+                size += data.info.size;
+
+                if (data.type == AssetType.Uncompressed)
+                    continue;
+
+                if (data.type == AssetType.UncompressedRuntime/* || !data.pack.canRecompress*/)
+                {
+                    totalBytesDownload += data.info.size;
+
+                    continue;
+                }
+
+                if (assetNames == null)
+                    assetNames = new List<string>();
+
+                assetNames.Add(pair.Key);
+            }
+
+            if (assetNames == null)
+                yield break;
+
+            bool result;
+            int numAssets = assetNames.Count;
+            uint downloadedBytes;
+            ulong fileOffset;
+            float progress;
+            string assetName, inputPath, outputPath;
+            Asset asset;
+            AssetBundleRecompressOperation assetBundleRecompressOperation;
+            IAssetPackEnumerator packEnumerator;
+            for (int i = 0; i < numAssets; ++i)
+            {
+                assetName = assetNames[i];
+                asset = __assets[assetName];
+
+                outputPath = __GetAssetPath(assetName);
+
+                if (asset.data.pack.isVail)
+                {
+                    inputPath = asset.data.pack.filePath;
+                    fileOffset = asset.data.pack.fileOffset;
+                    if (asset.data.pack.fileOffset > 0 || asset.data.type == AssetType.Stream)
+                    {
+                        packEnumerator = AssetUtility.CopyPack(asset.data.pack.name, outputPath, inputPath, fileOffset);
+                        if (packEnumerator == null)
+                            continue;
+
+                        yield return packEnumerator;
+
+                        if (!packEnumerator.isSuccessful)
+                            continue;
+
+                        inputPath = outputPath;
+                    }
+                    else if (!AssetUtility.UpdatePack(asset.data.pack.name, ref inputPath, ref fileOffset))
+                        continue;
+                }
+                else
+                    inputPath = outputPath;
+
+                if (asset.data.type == AssetType.Stream)
+                    result = true;
+                else
+                {
+                    CreateDirectory(outputPath);
+
+                    assetBundleRecompressOperation = AssetBundle.RecompressAssetBundleAsync(
+                        inputPath,
+                        outputPath,
+                        asset.data.type == AssetType.LZ4 ? BuildCompression.LZ4Runtime : BuildCompression.UncompressedRuntime/*,
+                    0,
+                    UnityEngine.ThreadPriority.High*/);
+
+                    if (handler == null)
+                        yield return assetBundleRecompressOperation;
+                    else
+                    {
+                        while (!assetBundleRecompressOperation.isDone)
+                        {
+                            yield return null;
+
+                            try
+                            {
+                                progress = assetBundleRecompressOperation.progress;
+                                downloadedBytes = (uint)Mathf.RoundToInt(progress * asset.data.info.size);
+                                handler(
+                                    assetName,
+                                    progress,
+                                    downloadedBytes,
+                                    totalBytesDownload + downloadedBytes,
+                                    size,
+                                    i,
+                                    numAssets);
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.LogError(e.InnerException ?? e);
+                            }
+                        }
+
+                        totalBytesDownload += asset.data.info.size;
+                    }
+
+                    result = assetBundleRecompressOperation.success;
+
+                    if(!result)
+                        Debug.LogError(assetBundleRecompressOperation.humanReadableResult);
+                }
+
+                if (result)
+                {
+                    try
+                    {
+                        using (var streamWrapper = new StreamWrapper(File.Open(__GetManagerPath(Path.GetDirectoryName(assetName)), FileMode.Open, FileAccess.ReadWrite)))
+                        {
+                            streamWrapper.Write(asset.offset, (byte)AssetType.UncompressedRuntime);
+                        }
+
+                        asset.data.type = AssetType.UncompressedRuntime;
+                        __assets[assetName] = asset;
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e.InnerException ?? e);
+                    }
+                    finally
+                    {
+                        //GC.Collect();
+                    }
+                }
+            }
+        }
+    }
+}

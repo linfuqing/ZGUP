@@ -1,0 +1,14 @@
+{
+    "name": "ZG.Collections.Editor",
+    "references": [
+        "ZG",
+        "ZG.Editor",
+        "ZG.Attributes.Editor"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
+}

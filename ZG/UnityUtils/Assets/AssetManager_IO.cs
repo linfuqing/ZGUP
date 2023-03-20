@@ -1,0 +1,609 @@
+using System;
+using System.IO;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.Scripting;
+
+namespace ZG
+{
+    public partial class AssetManager
+    {
+        public struct StreamWrapper : IDisposable
+        {
+            public readonly Stream Stream;
+
+            public readonly long length
+            {
+                get
+                {
+                    return Math.Max(Stream.Length - 16L, sizeof(UInt32));
+                }
+            }
+
+            public StreamWrapper(Stream stream)
+            {
+                Stream = stream;
+            }
+
+            public void Dispose()
+            {
+                if (Stream != null)
+                    Stream.Dispose();
+            }
+
+            public void Write(long offset, byte value)
+            {
+                Stream.Position = offset;
+                Stream.WriteByte(value);
+
+                Update(length);
+            }
+
+            public void Update(long length)
+            {
+                using (var md5 = new MD5CryptoServiceProvider())
+                {
+                    Stream.SetLength(length);
+
+                    //VERSION
+                    Stream.Position = sizeof(UInt32);
+
+                    //var bytes = new byte[length - sizeof(UInt32)];
+
+                    //Stream.Read(bytes, 0, (int)length - sizeof(UInt32));
+
+                    var md5Hash = md5.ComputeHash(Stream);
+
+                    UnityEngine.Assertions.Assert.AreEqual(16, md5Hash.Length);
+
+                    Stream.Position = length;
+                    Stream.Write(md5Hash, 0, 16);
+                }
+
+                UnityEngine.Assertions.Assert.IsTrue(Verify());
+            }
+
+            public readonly bool Verify()
+            {
+                long length = this.length;
+                Stream.Position = length;
+
+                byte[] md5Hash = new byte[16];
+                Stream.Read(md5Hash, 0, 16);
+
+                Stream.Position = sizeof(UInt32);
+                using (var md5 = new MD5CryptoServiceProvider())
+                {
+                    length -= sizeof(UInt32);
+
+                    byte[] bytes = new byte[length];
+
+                    Stream.Read(bytes, 0, (int)length);
+
+                    if (!MemoryEquals(md5.ComputeHash(bytes), md5Hash))
+                        return false;
+                }
+
+                return true;
+            }
+        }
+
+        public struct Writer : IDisposable
+        {
+            public readonly string Folder;
+            public readonly AssetManager AssetManager;
+            public readonly StreamWrapper StreamWrapper;
+
+            private BinaryReader __reader;
+            private BinaryWriter __writer;
+
+            public Writer(string folder, AssetManager assetManager)
+            {
+                Folder = FilterFolderName(folder);
+                AssetManager = assetManager;
+
+                string path = assetManager.__GetManagerPath(folder);
+
+                CreateDirectory(path);
+
+                StreamWrapper = new StreamWrapper(File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite));
+
+                __reader = new BinaryReader(StreamWrapper.Stream);
+                __writer = new BinaryWriter(StreamWrapper.Stream);
+            }
+
+            public void Dispose()
+            {
+                 StreamWrapper.Dispose();
+            }
+
+            public void Save()
+            {
+                StreamWrapper.Stream.Position = 0L;
+
+                int count = AssetManager.CountOf(Folder);
+
+                __writer.Write(VERSION);
+                __writer.Write(count);
+                if (count > 0)
+                {
+                    int index = 0;
+                    var assetNames = new string[count];
+                    foreach (var assetName in AssetManager.__assets.Keys)
+                    {
+                        if (GetFolderName(assetName) != Folder)
+                            continue;
+
+                        assetNames[index++] = assetName;
+                    }
+
+                    long offset;
+                    Asset asset;
+                    foreach (string assetName in assetNames)
+                    {
+                        __writer.Write(Path.GetFileName(assetName));
+
+                        offset = StreamWrapper.Stream.Position;
+
+                        asset = AssetManager.__assets[assetName];
+
+                        if (asset.offset != offset)
+                        {
+                            asset.offset = offset;
+
+                            AssetManager.__assets[assetName] = asset;
+                        }
+
+                        asset.data.Write(__writer);
+                    }
+                }
+
+                long length = StreamWrapper.Stream.Position;
+                StreamWrapper.Update(length);
+            }
+
+            public bool Write(string name, in AssetData data)
+            {
+                Asset asset;
+
+                string folder = GetFolderName(name);
+                if (folder != Folder)
+                {
+                    Debug.LogError($"The Folder Name {name} is vailed! (Need {Folder})");
+
+                    return false;
+                }
+
+                if (AssetManager.__assets == null)
+                    AssetManager.__assets = new Dictionary<string, Asset>();
+
+                if (AssetManager.__assets.TryGetValue(name, out asset))
+                {
+                    //长度不一致，不能这么写入
+                    /*if (asset.offset < 0L)
+                        return false;
+
+                    stream.Position = asset.offset;
+
+                    data.Write(__writer);*/
+
+                    asset.data = data;
+
+                    AssetManager.__assets[name] = asset;
+
+                    Save();
+                }
+                else
+                {
+                    StreamWrapper.Stream.Position = 0L;
+
+                    __writer.Write((UInt32)VERSION);
+
+                    Int32 count;
+                    if (StreamWrapper.Stream.Length - StreamWrapper.Stream.Position < sizeof(Int32))
+                    {
+                        count = 0;
+
+                        __writer.Write(count);
+                    }
+                    else
+                        count = __reader.ReadInt32();
+
+                    StreamWrapper.Stream.Position = Math.Max(StreamWrapper.Stream.Position, StreamWrapper.length);
+
+                    //Debug.Log($"{__path} : {name} : {fileStream.Length} : {CountOf(folder)}");
+
+                    __writer.Write(Path.GetFileName(name));
+
+                    asset.offset = StreamWrapper.Stream.Position;
+
+                    data.Write(__writer);
+
+                    asset.data = data;
+
+                    long length = StreamWrapper.Stream.Position;
+
+                    StreamWrapper.Stream.Position = sizeof(UInt32);
+                    __writer.Write(count + (Int32)1);
+
+                    StreamWrapper.Update(length);
+
+                    AssetManager.__assets[name] = asset;
+                }
+
+                return true;
+            }
+        }
+
+        public static string FilterFolderName(string value)
+        {
+            return value.Replace('\\', '/');
+        }
+
+        public static string GetFolderName(string path)
+        {
+            string folder = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(folder))
+                folder = FilterFolderName(folder);
+
+            return folder;
+        }
+
+        public static void CreateDirectory(string path)
+        {
+            string folder = Path.GetDirectoryName(path);
+            if (string.IsNullOrEmpty(folder) || Directory.Exists(folder))
+                return;
+
+            CreateDirectory(folder);
+
+            Directory.CreateDirectory(folder);
+        }
+
+        public uint GetVersion(string folder)
+        {
+            if (string.IsNullOrEmpty(folder))
+                return version;
+
+            string path = __GetManagerPath(folder);
+
+            if (!File.Exists(path))
+                return 0;
+
+            using (var reader = new BinaryReader(File.OpenRead(path)))
+                return reader.ReadUInt32();
+        }
+
+        public void LoadFrom(string path)
+        {
+            string folder = Path.GetDirectoryName(path);
+            path = string.IsNullOrEmpty(path) ? __path : Path.Combine(Path.GetDirectoryName(__path), path);
+            if (File.Exists(path))
+            {
+                using (var fileStream = File.OpenRead(path))
+                {
+                    __Load(fileStream, folder, out uint version, ref __assets);
+
+                    this.version = version;
+                }
+            }
+        }
+
+        public void SaveFolder()
+        {
+            using (var writer = new Writer(string.Empty, this))
+            {
+                writer.Save();
+            }
+
+            /*CreateDirectory(__path);
+
+            using (var fileStream = File.Open(__path, FileMode.Create, FileAccess.Write))
+            {
+                if (fileStream == null)
+                    return;
+
+                using (var writer = new BinaryWriter(fileStream))
+                {
+                    writer.Write(VERSION);
+                    writer.Write(CountOf(null));
+                    if (__assets != null)
+                    {
+                        long offset;
+                        Asset asset;
+                        var assetNames = new List<string>(__assets.Keys);
+                        foreach (string assetName in assetNames)
+                        {
+                            if (assetName == null || !string.IsNullOrEmpty(Path.GetDirectoryName(assetName)))
+                                continue;
+
+                            writer.Write(Path.GetFileName(assetName));
+
+                            offset = fileStream.Position;
+
+                            asset = __assets[assetName];
+
+                            if (asset.offset != offset)
+                            {
+                                asset.offset = offset;
+
+                                __assets[assetName] = asset;
+                            }
+
+                            __Save(writer, asset.data);
+                        }
+                    }
+                }
+            }*/
+        }
+
+        public void Verify(Action<string, int, int> handler)
+        {
+            if (__assets == null)
+                return;
+
+            using (var md5 = new MD5CryptoServiceProvider())
+            {
+                int index = 0, count = __assets.Count;
+                Asset asset;
+                string name, path;
+                List<string> assetNames = null;
+                foreach (var pair in __assets)
+                {
+                    name = pair.Key;
+
+                    asset = pair.Value;
+                    if (handler != null)
+                        handler(name, index++, count);
+
+                    path = Path.Combine(Path.GetDirectoryName(__path), name);
+                    if (!File.Exists(path) || !MemoryEquals(md5.ComputeHash(File.OpenRead(path)), asset.data.info.md5))
+                    {
+                        if (assetNames == null)
+                            assetNames = new List<string>();
+
+                        assetNames.Add(name);
+                    }
+                }
+
+                if (assetNames != null)
+                {
+                    foreach (string assetName in assetNames)
+                        __assets.Remove(assetName);
+                }
+            }
+        }
+
+        public void Update(string name, ref uint minVersion)
+        {
+            string directoryName = Path.GetDirectoryName(__path);
+            if (version < 1)
+            {
+                version = VERSION;
+
+                int assetCount = this.assetCount;
+                if (assetCount > 0)
+                {
+                    var keys = new string[assetCount];
+                    __assets.Keys.CopyTo(keys, 0);
+
+                    using (var md5 = new MD5CryptoServiceProvider())
+                    {
+                        Asset asset;
+                        foreach (var key in keys)
+                        {
+                            asset = __assets[key];
+                            asset.data.info.md5 = md5.ComputeHash(File.ReadAllBytes(Path.Combine(directoryName, key)));
+                            __assets[key] = asset;
+                        }
+                    }
+                }
+            }
+
+            string path = Path.Combine(directoryName, name);
+            if (File.Exists(path))
+            {
+                AssetData data;
+                if (__assets != null && __assets.TryGetValue(name, out var asset))
+                    data = asset.data;
+                else
+                {
+                    data.info.version = 0;
+                    data.type = AssetType.Uncompressed;
+                    data.pack = AssetPack.Default;
+                    data.dependencies = null;
+                }
+
+                data.info.version = Math.Max(data.info.version, minVersion);
+
+                minVersion = ++data.info.version;
+
+                data.info.size = (uint)new FileInfo(path).Length;
+
+                using (var md5 = new MD5CryptoServiceProvider())
+                    data.info.md5 = md5.ComputeHash(File.ReadAllBytes(path));
+
+                //__Create(name, data);
+                using (var writer = new Writer(string.Empty, this))
+                    writer.Write(name, data);
+            }
+            else
+            {
+                __Delete(name);
+
+                SaveFolder();
+            }
+        }
+
+        public void Write(string name, byte[] bytes)
+        {
+            File.WriteAllBytes(__GetAssetPath(name), bytes);
+        }
+
+        public void Write(string name, Stream stream)
+        {
+            using(var fileStream  = File.OpenWrite(__GetAssetPath(name)))
+                stream.CopyTo(fileStream);
+        }
+
+        /*private long __Create(string name, in AssetData data)
+        {
+            Asset asset;
+
+            if (__assets == null)
+                __assets = new Dictionary<string, Asset>();
+
+            bool isContains = __assets.Remove(name);
+            string folder = Path.GetDirectoryName(name);
+            if (string.IsNullOrEmpty(folder))
+            {
+                int assetCount = CountOf(folder);
+                if (assetCount > 0 && version != VERSION || isContains)
+                    SaveFolder();
+
+                CreateDirectory(__path);
+
+                using (var fileStream = File.Open(__path, FileMode.OpenOrCreate, FileAccess.Write))
+                {
+                    using (var writer = new BinaryWriter(fileStream))
+                    {
+                        writer.Write(VERSION);
+                        writer.Write(assetCount + 1);
+
+                        fileStream.Position = fileStream.Length;
+
+                        writer.Write(Path.GetFileName(name));
+
+                        asset.offset = fileStream.Position;
+
+                        data.Write(writer);
+                    }
+                }
+            }
+            else
+            {
+                var assetManager = new AssetManager(__GetManagerPath(folder));
+
+                asset.offset = assetManager.__Create(Path.GetFileName(name), data);
+            }
+
+            asset.data = data;
+
+            __assets[name] = asset;
+
+            return asset.offset;
+        }*/
+
+        /*private static void __Save(BinaryWriter writer, AssetData data)
+        {
+            writer.Write((byte)data.type);
+
+            data.info.Write(writer);
+
+            writer.Write(data.fileOffset);
+            writer.Write(string.IsNullOrEmpty(data.filePath) ? string.Empty : data.filePath);
+
+            int numDependencies = data.dependencies == null ? 0 : data.dependencies.Length;
+            writer.Write(numDependencies);
+            for (int i = 0; i < numDependencies; ++i)
+                writer.Write(data.dependencies[i]);
+        }*/
+
+        public bool __Delete(string name)
+        {
+            if (__assets == null)
+                return false;
+
+            if (__assets.TryGetValue(name, out var asset) && __assets.Remove(name))
+            {
+                /*var assetManager = new AssetManager(__GetManagerPath(folder));
+
+                string fileName = Path.GetFileName(name);
+                if (assetManager.Delete(fileName))
+                    return true;*/
+
+                if (!asset.data.isReadOnly)
+                    File.Delete(__GetAssetPath(name));
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool __Load(
+            Stream stream,
+            string folder,
+            out uint version,
+            ref Dictionary<string, Asset> assets)
+        {
+            if (assets == null)
+                assets = new Dictionary<string, Asset>();
+
+            try
+            {
+                var reader = new BinaryReader(stream);
+                {
+                    version = reader.ReadUInt32();
+                    if (version < 0 || version > VERSION)
+                        return false;
+
+                    if (version > 7)
+                    {
+                        long position = stream.Position;
+
+                        if (!new StreamWrapper(stream).Verify())
+                        {
+                            Debug.LogError("Verify Fail!");
+
+                            return false;
+                        }
+
+                        stream.Position = position;
+                    }
+
+                    int numAssets = reader.ReadInt32();
+
+                    if (!string.IsNullOrEmpty(folder))
+                        folder = FilterFolderName(folder) + '/';
+
+                    string name;
+                    Asset asset;
+                    for (int i = 0; i < numAssets; ++i)
+                    {
+                        name = reader.ReadString();
+
+                        /*asset.info.version = reader.ReadUInt32();
+                        asset.info.size = reader.ReadUInt32();
+                        asset.info.md5 = reader.ReadBytes(16);*/
+
+                        asset.offset = stream.Position;
+
+                        asset.data = AssetData.Read(reader, version);
+
+                        if (!string.IsNullOrEmpty(folder))
+                            name = folder + name;
+
+                        assets[name] = asset;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                version = 0;
+
+                Debug.LogException(e.InnerException ?? e);
+
+                return false;
+            }
+
+            return true;
+        }
+    }
+}

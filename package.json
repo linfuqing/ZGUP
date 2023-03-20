@@ -1,0 +1,13 @@
+{
+  "name": "cn.com.zerogame.unity",
+  "displayName": "ZGUP",
+  "version": "2.2",
+  "unity": "2022.2",
+  "unityRelease": "0f1",
+  "dependencies": {
+  },
+  "description": "Zero Game Unity Package",
+  "keywords": [
+    "zg"
+  ]
+}

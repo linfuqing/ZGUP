@@ -1,0 +1,13 @@
+{
+    "name": "ZG.Avatar.Editor",
+    "references": [
+        "ZG",
+        "ZG.Editor"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
+}
