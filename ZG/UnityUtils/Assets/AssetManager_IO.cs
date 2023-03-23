@@ -446,10 +446,21 @@ namespace ZG
             File.WriteAllBytes(__GetAssetPath(name), bytes);
         }
 
-        public void Write(string name, Stream stream)
+        public void Write(string name, Stream stream, int bufferSize = 1024)
         {
-            using(var fileStream  = File.OpenWrite(__GetAssetPath(name)))
-                stream.CopyTo(fileStream);
+            using (var fileStream = File.OpenWrite(__GetAssetPath(name)))
+            {
+                int bytesToRead;
+                var buffer = new byte[bufferSize];
+                do
+                {
+                    bytesToRead = stream.Read(buffer, 0, bufferSize);
+                    fileStream.Write(buffer, 0, bufferSize);
+
+                } while (bytesToRead > 0);
+
+                //stream.CopyTo(fileStream);
+            }
         }
 
         /*private long __Create(string name, in AssetData data)

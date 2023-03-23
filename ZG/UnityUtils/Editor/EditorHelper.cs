@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.IO.Compression;
 
 namespace ZG
 {
@@ -440,6 +441,27 @@ namespace ZG
             }
 
             EditorUtility.ClearProgressBar();
+        }
+
+        [MenuItem("Assets/ZG/GZip")]
+        public static void GZip(MenuCommand command)
+        {
+            var target = command.context == null ? Selection.activeObject : command.context;
+            if (target == null)
+                return;
+
+            var dataPath = Application.dataPath;
+            var path = Path.Combine(dataPath.Remove(dataPath.Length - 7), AssetDatabase.GetAssetPath(target));
+            using (var fileStreamToWrite = File.OpenWrite(path + ".gz"))
+            {
+                using (var fileStreamToRead = File.OpenRead(path))
+                {
+                    using (var gzipStream = new GZipStream(fileStreamToWrite, CompressionMode.Compress))
+                        fileStreamToRead.CopyTo(gzipStream);
+                }
+            }
+
+            AssetDatabase.Refresh();
         }
     }
 }
