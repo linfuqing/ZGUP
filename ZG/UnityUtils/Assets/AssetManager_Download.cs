@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Scripting;
+using System.Linq;
 
 namespace ZG
 {
@@ -1483,7 +1484,10 @@ namespace ZG
                                             {
                                                 Debug.LogError($"{fullURL} : { www.error}");
 
-                                                continue;
+                                                if (isForce)
+                                                    continue;
+                                                else
+                                                    break;
                                             }
                                         }
 
