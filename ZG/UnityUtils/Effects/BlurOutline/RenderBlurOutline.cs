@@ -5,6 +5,7 @@ using UnityEngine.Rendering;
 namespace ZG
 {
     [RequireComponent(typeof(Camera))]
+    //[ExecuteAlways]
     public class RenderBlurOutline : MonoBehaviour
     {
         public enum SilhouetteType
