@@ -9,7 +9,7 @@ namespace ZG
         [SerializeField]
         internal Color _color;
 
-        private int __index;
+        private int __index = -1;
         private bool __isStart;
 
         protected void Start()
@@ -28,6 +28,18 @@ namespace ZG
         protected void OnDisable()
         {
             instance.Remove(__index);
+
+            __index = -1;
+        }
+
+        protected void OnValidate()
+        {
+            if (__index != -1)
+            {
+                OnDisable();
+
+                __Start();
+            }
         }
 
         private void __Start()
