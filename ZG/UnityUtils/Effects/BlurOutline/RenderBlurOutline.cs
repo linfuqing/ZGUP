@@ -25,6 +25,8 @@ namespace ZG
 
         bool isVail { get; }
 
+        bool needDepthSort { get; }
+
         RenderBlurOutlineData data
         {
             get;
@@ -169,6 +171,8 @@ namespace ZG
 
 
         public bool isVail => silhouetteCount > 0;
+
+        public bool needDepthSort => false;
 
         public int silhouetteCount
         {
