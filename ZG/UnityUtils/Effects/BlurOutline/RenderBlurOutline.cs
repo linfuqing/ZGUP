@@ -1,12 +1,46 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace ZG
 {
+    [Serializable]
+    public struct RenderBlurOutlineData
+    {
+        public int blurIterCount;
+        public int downSample;
+        public float strength;
+        public Vector2 blurScale;
+    }
+
+    public interface IRenderBlurOutline
+    {
+        public static IRenderBlurOutline instance
+        {
+            get;
+
+            set;
+        }
+
+        bool isVail { get; }
+
+        RenderBlurOutlineData data
+        {
+            get;
+        }
+
+        void Draw(
+            Material[] silhouetteMaterials, 
+            CommandBuffer cmd,
+            ref ScriptableRenderContext context,
+            ref CullingResults cullingResults,
+            ref DrawingSettings drawingSettings);
+    }
+
     [RequireComponent(typeof(Camera))]
     //[ExecuteAlways]
-    public class RenderBlurOutline : MonoBehaviour
+    public class RenderBlurOutline : MonoBehaviour, IRenderBlurOutline
     {
         public enum SilhouetteType
         {
@@ -107,7 +141,11 @@ namespace ZG
 
             Color ISilhouette.color => color;
         }
-        
+
+        public static readonly int SkinMatrixIndex = Shader.PropertyToID("_SkinMatrixIndex");
+        public static readonly int ComputeMeshIndex = Shader.PropertyToID("_ComputeMeshIndex");
+        public static readonly int SolidColor = Shader.PropertyToID("_SolidColor");
+
         public bool isAutoUpdate;
         public int blurIterCount = 1;
         public int downSample = 1;
@@ -116,21 +154,21 @@ namespace ZG
         public Shader outlineShader;
         public Shader silhouetteShader;
 
+        /*public string[] solidShaderResourceNames =
+        {
+            "ZG/SolidColor",
+            "ZG/SolidColorLinearBlendSkinning",
+            "ZG/SolidColorComputeDeformation"
+        };*/
+
         private bool __isDirty;
         private Material __outlineMaterial;
         private Material __silhouetteMaterial;
         private CommandBuffer __renderCommand;
         private Pool<ISilhouette> __silhouettes;
 
-        private static RenderBlurOutline __instance;
 
-        public static RenderBlurOutline instance
-        {
-            get
-            {
-                return __instance;
-            }
-        }
+        public bool isVail => silhouetteCount > 0;
 
         public int silhouetteCount
         {
@@ -145,6 +183,20 @@ namespace ZG
             get
             {
                 return __silhouettes;
+            }
+        }
+
+        public RenderBlurOutlineData data
+        {
+            get
+            {
+                RenderBlurOutlineData result;
+                result.blurIterCount = blurIterCount;
+                result.downSample = downSample;
+                result.strength = strength;
+                result.blurScale = blurScale;
+
+                return result;
             }
         }
 
@@ -188,10 +240,59 @@ namespace ZG
 
             return false;
         }
-        
+
+        public void Draw(
+            Material[] silhouetteMaterials, 
+            CommandBuffer cmd,
+            ref ScriptableRenderContext context,
+            ref CullingResults cullingResults,
+            ref DrawingSettings drawingSettings)
+        {
+            enabled = false;
+
+            int offset;
+            SilhouetteType silhouetteType;
+            ISilhouette silhouette;
+            Material material;
+            //Shader shader;
+            foreach (var pair in silhouettes)
+            {
+                silhouette = pair.Value;
+                if (!silhouette.GetTypeAndOffset(out silhouetteType, out offset))
+                    continue;
+
+                material = silhouetteMaterials[(int)silhouetteType];
+                /*if (material == null)
+                {
+                    shader = Shader.Find(solidShaderResourceNames[(int)silhouetteType]);
+
+                    material = shader == null ? null : new Material(shader);
+
+                    __silhouetteMaterials[(int)silhouetteType] = material;
+                }*/
+
+                if (material == null)
+                    continue;
+
+                switch (silhouetteType)
+                {
+                    case SilhouetteType.LinearBlendSkinning:
+                        cmd.SetGlobalInt(SkinMatrixIndex, offset);
+                        break;
+                    case SilhouetteType.ComputeDeformation:
+                        cmd.SetGlobalInt(ComputeMeshIndex, offset);
+                        break;
+                }
+
+                cmd.SetGlobalColor(SolidColor, silhouette.color);
+
+                silhouette.Draw(cmd, material);
+            }
+        }
+
         void Awake()
         {
-            __instance = this;
+            IRenderBlurOutline.instance = this;
         }
         
         void OnRenderImage(RenderTexture src, RenderTexture dest)

@@ -1,5 +1,4 @@
 using UnityEngine;
-using static ZG.RenderBlurOutline;
 
 namespace ZG
 {
@@ -27,7 +26,9 @@ namespace ZG
 
         protected void OnDisable()
         {
-            instance.Remove(__index);
+            var instance = IRenderBlurOutline.instance as RenderBlurOutline;
+            if(instance != null)
+                instance.Remove(__index);
 
             __index = -1;
         }
@@ -44,7 +45,9 @@ namespace ZG
 
         private void __Start()
         {
-            __index = instance.Add(new RendererSilhouette(_color, GetComponent<Renderer>()));
+            var instance = IRenderBlurOutline.instance as RenderBlurOutline;
+            if (instance != null)
+                __index = instance.Add(new RenderBlurOutline.RendererSilhouette(_color, GetComponent<Renderer>()));
         }
     }
 }
