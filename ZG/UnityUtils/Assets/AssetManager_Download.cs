@@ -1711,6 +1711,8 @@ namespace ZG
                         assetBundle = AssetBundle.LoadFromMemory(bytes);
                         if(assetBundle == null)
                         {
+                            Debug.LogError(url);
+
                             if (isForce)
                                 bytes = null;
                             else

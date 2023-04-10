@@ -288,7 +288,8 @@ namespace ZG
             {
                 using (var fileStream = File.OpenRead(path))
                 {
-                    __Load(fileStream, folder, out uint version, ref __assets);
+                    if(!__Load(fileStream, folder, out uint version, ref __assets))
+                        Debug.LogError(path);
 
                     this.version = version;
                 }
