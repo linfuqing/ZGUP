@@ -1099,6 +1099,10 @@ namespace ZG
 
                             assetNamesToDelete.Add(assetName);
 
+#if DEBUG
+                            Debug.Log($"Delete Asset: {assetName}");
+#endif
+
                             isNeedToSave = string.IsNullOrEmpty(folder);
                         }
                     }
@@ -1137,6 +1141,10 @@ namespace ZG
                         (versions != null && versions.TryGetValue(folder, out version) ? version - 1 : 0)) < 
                         destination.info.version)
                     {
+#if DEBUG
+                        Debug.Log($"Update Asset {assetName} To Version {destination.info.version}(URL: {result.Value.Item2})");
+#endif
+
                         ++numAssets;
 
                         minSize = Math.Min(minSize, destination.info.size);
