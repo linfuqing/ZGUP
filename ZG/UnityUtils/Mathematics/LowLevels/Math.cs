@@ -496,7 +496,7 @@ namespace ZG.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 CalculateParabolaAngleAndTime(float speed, float gravity, float distance, float height)
+        public static float2 CalculateParabolaAngleAndTime(bool isNearst, float speed, float gravity, float distance, float height)
         {
             if (gravity > 0.0f)
             {
@@ -510,7 +510,7 @@ namespace ZG.Mathematics
                 delta = math.sqrt(delta) / gravityDistance;
                 float alpha = math.atan(sqrSpeed + delta);
                 float beta = math.atan(sqrSpeed - delta);
-                float theta = math.min(alpha, beta);
+                float theta = isNearst ? math.min(alpha, beta) : math.max(alpha, beta);
                 float time = distance / (speed * math.cos(theta));
 
                 return new float2(theta, time);
@@ -524,14 +524,14 @@ namespace ZG.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 CalculateParabolaAngleAndTime(float speed, float gravity, float3 distance, ref float3 direction)
+        public static float2 CalculateParabolaAngleAndTime(bool isNearst, float speed, float gravity, float3 distance, ref float3 direction)
         {
             if (math.abs(distance.x) < math.FLT_MIN_NORMAL)
                 return float2.zero;
 
             quaternion rotation = quaternion.AxisAngle(math.up(), -math.atan2(distance.x, distance.z));
             float3 point = math.mul(rotation, distance);
-            float2 result = CalculateParabolaAngleAndTime(speed, gravity, point.z, point.y);
+            float2 result = CalculateParabolaAngleAndTime(isNearst, speed, gravity, point.z, point.y);
 
             if (result.y > 0.0f)
                 direction = math.normalize(new float3(distance.x, math.abs(point.z) * math.tan(result.x), distance.z));
@@ -542,6 +542,7 @@ namespace ZG.Mathematics
         }
 
         public static bool CalculateParabolaTrajectory(
+            bool isNearst, 
             float diff, 
             float accuracy,
             float gravity,
@@ -555,7 +556,7 @@ namespace ZG.Mathematics
             float3 direction = math.float3(hitPoint.x, position.y, hitPoint.z) - position;
             quaternion rotation = FromToRotation(direction, math.float3(0.0f, 0.0f, 1.0f));
             float3 localHitPoint = math.rotate(rotation, hitPoint - position);
-            float2 angleAndTime = CalculateParabolaAngleAndTime(speed, gravity, localHitPoint.z, localHitPoint.y);
+            float2 angleAndTime = CalculateParabolaAngleAndTime(isNearst, speed, gravity, localHitPoint.z, localHitPoint.y);
             if (angleAndTime.y > math.FLT_MIN_NORMAL)
             {
                 float3 newHitPoint = CalculateLinearTarget(targetPosition, targetVelocity, angleAndTime.y);
@@ -569,6 +570,7 @@ namespace ZG.Mathematics
 
                 if (newDiff < diff)
                     return CalculateParabolaTrajectory(
+                        isNearst, 
                         newDiff, 
                         accuracy,
                         gravity,
@@ -586,6 +588,7 @@ namespace ZG.Mathematics
         }
 
         public static bool CalculateParabolaTrajectory(
+            bool isNearst,
             float accuracy,
             float gravity,
             float speed,
@@ -603,6 +606,7 @@ namespace ZG.Mathematics
             }
 
             return CalculateParabolaTrajectory(
+                isNearst, 
                 float.MaxValue,
                 accuracy,
                 gravity,
