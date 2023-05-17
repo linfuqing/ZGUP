@@ -211,7 +211,7 @@ namespace ZG
 
         public int Add(ISilhouette silhouette)
         {
-            if (!__isDirty)
+            if (!__isDirty && isActiveAndEnabled)
             {
                 if (__renderCommand == null)
                 {
