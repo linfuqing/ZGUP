@@ -31,6 +31,8 @@ namespace ZG
     {
         public CallbackHandle value;
 
+        public readonly static CallbackHandle<T> Null = new CallbackHandle<T> { value = CallbackHandle.Null };
+
         public bool Equals(CallbackHandle<T> other)
         {
             return value.Equals(other.value);
