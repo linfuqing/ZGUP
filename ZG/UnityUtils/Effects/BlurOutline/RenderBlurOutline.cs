@@ -170,7 +170,15 @@ namespace ZG
         private Pool<ISilhouette> __silhouettes;
 
 
-        public bool isVail => silhouetteCount > 0;
+        public bool isVail
+        {
+            get
+            {
+                enabled = false;
+
+                return silhouetteCount > 0;
+            }
+        }
 
         public bool needDepthSort => false;
 
