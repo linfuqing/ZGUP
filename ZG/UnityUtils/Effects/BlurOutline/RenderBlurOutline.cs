@@ -302,11 +302,18 @@ namespace ZG
             }
         }
 
-        void Awake()
+        void OnEnable()
         {
-            IRenderBlurOutline.instance = this;
+            if (IRenderBlurOutline.instance == null)
+                IRenderBlurOutline.instance = this;
         }
-        
+
+        void OnDisable()
+        {
+            if(IRenderBlurOutline.instance == (IRenderBlurOutline)this)
+                IRenderBlurOutline.instance = null;
+        }
+
         void OnRenderImage(RenderTexture src, RenderTexture dest)
         {
             if (__silhouettes == null || __silhouettes.count < 1)
