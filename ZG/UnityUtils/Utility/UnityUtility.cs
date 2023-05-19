@@ -16,6 +16,11 @@ namespace ZG
         int Replace(Material source, Material destination);
     }
 
+    public interface IUISelectable
+    {
+
+    }
+
     [System.Serializable]
     public class ActiveEvent : UnityEngine.Events.UnityEvent<bool>
     {
@@ -79,8 +84,7 @@ namespace ZG
         public static bool IsUISelected()
         {
             GameObject selectedGameObject = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
-            return selectedGameObject != null && selectedGameObject.transform is RectTransform;
-
+            return selectedGameObject != null && (selectedGameObject.transform is RectTransform || selectedGameObject.GetComponent<IUISelectable>() != null);
         }
 
         public static bool IsInputFieldFocused()
