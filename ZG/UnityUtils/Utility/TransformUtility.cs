@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace ZG
 {
@@ -298,6 +299,30 @@ namespace ZG
 
                 transform = transform.parent;
             }
+
+            return stringBuilder == null ? null : stringBuilder.ToString();
+        }
+
+        public static string GetPath(this Transform transform, Predicate<Transform> predicate, out Transform root)
+        {
+            System.Text.StringBuilder stringBuilder = null;
+            while (transform != null)
+            {
+                if (predicate(transform))
+                    break;
+
+                if (stringBuilder == null)
+                    stringBuilder = new System.Text.StringBuilder(transform.name);
+                else
+                {
+                    stringBuilder.Insert(0, '/');
+                    stringBuilder.Insert(0, transform.name);
+                }
+
+                transform = transform.parent;
+            }
+
+            root = transform;
 
             return stringBuilder == null ? null : stringBuilder.ToString();
         }
