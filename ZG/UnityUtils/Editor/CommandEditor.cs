@@ -93,6 +93,8 @@ namespace ZG
             {
                 if (GUILayout.Button("Execute"))
                 {
+                    methods.Sort();
+
                     foreach (var methodToInvoke in methods)
                         methodToInvoke.instance.Invoke(null, null);
                 }
