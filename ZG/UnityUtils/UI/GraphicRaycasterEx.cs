@@ -7,11 +7,17 @@ namespace ZG
 {
     public class GraphicRaycasterEx : GraphicRaycaster
     {
+        private struct BackgroundGraphics
+        {
+            public int sortOrder;
+            public int depth;
+        }
+
         private Canvas __canvas;
         private Dictionary<int, int> __counts;
 
         private static HashSet<GraphicRaycasterEx> __instances;
-        private static Dictionary<Transform, int> __backgroundGraphics;
+        private static Dictionary<Transform, BackgroundGraphics> __backgroundGraphics;
 
         public Canvas canvas
         {
@@ -33,7 +39,7 @@ namespace ZG
 
                 if (currentCanvas.renderMode == RenderMode.ScreenSpaceOverlay || currentEventCamera == null)
                     return currentCanvas.targetDisplay;
-                
+
                 return currentEventCamera.targetDisplay;
             }
         }
@@ -53,12 +59,16 @@ namespace ZG
             return false;
         }
 
-        public static void AddBackground(Transform transform, int depth = 0)
+        public static void AddBackground(Transform transform, int depth = 0, int sortOrder = 0)
         {
-            if (__backgroundGraphics == null)
-                __backgroundGraphics = new Dictionary<Transform, int>();
+            BackgroundGraphics backgroundGraphics;
+            backgroundGraphics.depth = depth;
+            backgroundGraphics.sortOrder = sortOrder;
 
-            __backgroundGraphics[transform] = depth;
+            if (__backgroundGraphics == null)
+                __backgroundGraphics = new Dictionary<Transform, BackgroundGraphics>();
+
+            __backgroundGraphics[transform] = backgroundGraphics;
         }
 
         public static bool RemoveBackground(Transform transform)
@@ -82,16 +92,20 @@ namespace ZG
             Ray ray = currentEventCamera == null ? default : currentEventCamera.ScreenPointToRay(eventPosition);
             float distance;
             int sortingLayerID = canvas.sortingLayerID, sortingOrder = canvas.sortingOrder;
+            bool isScreenSpaceOverlay = currentEventCamera == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay;
             if (__backgroundGraphics != null)
             {
                 foreach (var pair in __backgroundGraphics)
                 {
+                    if (pair.Value.sortOrder < sortingOrder)
+                        continue;
+
                     transform = pair.Key;
                     if (transform == null)
                         continue;
 
                     forward = transform.forward;
-                    if (currentEventCamera == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+                    if (isScreenSpaceOverlay)
                         distance = 0.0f;
                     else
                     {
@@ -112,7 +126,7 @@ namespace ZG
                             distance = distance,
                             displayIndex = displayIndex,
                             index = resultAppendList.Count,
-                            depth = pair.Value,
+                            depth = pair.Value.depth,
                             sortingLayer = sortingLayerID,
                             sortingOrder = sortingOrder,
                             worldPosition = ray.origin + ray.direction * distance,

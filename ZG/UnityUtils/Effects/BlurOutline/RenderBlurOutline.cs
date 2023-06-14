@@ -302,13 +302,13 @@ namespace ZG
             }
         }
 
-        void OnEnable()
+        void Awake()
         {
             if (IRenderBlurOutline.instance == null)
                 IRenderBlurOutline.instance = this;
         }
 
-        void OnDisable()
+        void OnDestroy()
         {
             if(IRenderBlurOutline.instance == (IRenderBlurOutline)this)
                 IRenderBlurOutline.instance = null;
