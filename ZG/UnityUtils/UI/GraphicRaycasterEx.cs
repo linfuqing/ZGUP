@@ -44,7 +44,7 @@ namespace ZG
                 return false;
 
             int count;
-            foreach (GraphicRaycasterEx instance in __instances)
+            foreach (var instance in __instances)
             {
                 if (instance != null && instance.__counts != null && instance.__counts.TryGetValue(pointerId, out count) && count > 0)
                     return true;
@@ -58,7 +58,7 @@ namespace ZG
             if (__backgroundGraphics == null)
                 __backgroundGraphics = new Dictionary<Transform, int>();
 
-            __backgroundGraphics.Add(transform, depth);
+            __backgroundGraphics[transform] = depth;
         }
 
         public static bool RemoveBackground(Transform transform)
