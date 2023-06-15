@@ -7,17 +7,17 @@ namespace ZG
 {
     public class GraphicRaycasterEx : GraphicRaycaster
     {
-        private struct BackgroundGraphics
+        /*private struct ForegroundGraphics
         {
-            public int sortOrder;
+            public int sortingOrder;
             public int depth;
-        }
+        }*/
 
         private Canvas __canvas;
         private Dictionary<int, int> __counts;
 
         private static HashSet<GraphicRaycasterEx> __instances;
-        private static Dictionary<Transform, BackgroundGraphics> __backgroundGraphics;
+        /*private static Dictionary<Transform, ForegroundGraphics> __foregroundGraphics;
 
         public Canvas canvas
         {
@@ -42,7 +42,7 @@ namespace ZG
 
                 return currentEventCamera.targetDisplay;
             }
-        }
+        }*/
 
         public static bool IsHit(int pointerId)
         {
@@ -59,25 +59,25 @@ namespace ZG
             return false;
         }
 
-        public static void AddBackground(Transform transform, int depth = 0, int sortOrder = 0)
+        /*public static void AddForeground(Transform transform, int sortingOrder = 0, int depth = 0)
         {
-            BackgroundGraphics backgroundGraphics;
-            backgroundGraphics.depth = depth;
-            backgroundGraphics.sortOrder = sortOrder;
+            ForegroundGraphics foregroundGraphics;
+            foregroundGraphics.sortingOrder = sortingOrder;
+            foregroundGraphics.depth = depth;
 
-            if (__backgroundGraphics == null)
-                __backgroundGraphics = new Dictionary<Transform, BackgroundGraphics>();
+            if (__foregroundGraphics == null)
+                __foregroundGraphics = new Dictionary<Transform, ForegroundGraphics>();
 
-            __backgroundGraphics[transform] = backgroundGraphics;
+            __foregroundGraphics[transform] = foregroundGraphics;
         }
 
-        public static bool RemoveBackground(Transform transform)
+        public static bool RemoveForeground(Transform transform)
         {
-            if (__backgroundGraphics != null)
-                return __backgroundGraphics.Remove(transform);
+            if (__foregroundGraphics != null)
+                return __foregroundGraphics.Remove(transform);
 
             return false;
-        }
+        }*/
 
         public override void Raycast(PointerEventData eventData, List<RaycastResult> resultAppendList)
         {
@@ -85,55 +85,58 @@ namespace ZG
 
             base.Raycast(eventData, resultAppendList);
 
-            var canvas = this.canvas;
-            var currentEventCamera = eventCamera;
-            Transform transform;
-            Vector3 eventPosition = eventData.position, forward;
-            Ray ray = currentEventCamera == null ? default : currentEventCamera.ScreenPointToRay(eventPosition);
-            float distance;
-            int sortingLayerID = canvas.sortingLayerID, sortingOrder = canvas.sortingOrder;
-            bool isScreenSpaceOverlay = currentEventCamera == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay;
-            if (__backgroundGraphics != null)
+            /*if (resultAppendList.Count == count)
             {
-                foreach (var pair in __backgroundGraphics)
+                var canvas = this.canvas;
+                var currentEventCamera = eventCamera;
+                Transform transform;
+                Vector3 eventPosition = eventData.position, forward;
+                Ray ray = currentEventCamera == null ? default : currentEventCamera.ScreenPointToRay(eventPosition);
+                float distance;
+                int sortingLayerID = canvas.sortingLayerID, sortingOrder = canvas.sortingOrder;
+                bool isScreenSpaceOverlay = currentEventCamera == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay;
+                if (__foregroundGraphics != null)
                 {
-                    if (pair.Value.sortOrder < sortingOrder)
-                        continue;
-
-                    transform = pair.Key;
-                    if (transform == null)
-                        continue;
-
-                    forward = transform.forward;
-                    if (isScreenSpaceOverlay)
-                        distance = 0.0f;
-                    else
+                    foreach (var pair in __foregroundGraphics)
                     {
-                        // http://geomalgorithms.com/a06-_intersect-2.html
-                        distance = (Vector3.Dot(forward, transform.position - ray.origin) / Vector3.Dot(forward, ray.direction));
+                        if (pair.Value.sortingOrder >= sortingOrder)
+                            continue;
 
-                        // Check to see if the go is behind the camera.
-                        /*if (distance < 0.0f)
-                            continue;*/
-                    }
+                        transform = pair.Key;
+                        if (transform == null)
+                            continue;
 
-                    resultAppendList.Add(
-                        new RaycastResult()
+                        forward = transform.forward;
+                        if (isScreenSpaceOverlay)
+                            distance = 0.0f;
+                        else
                         {
-                            module = this,
-                            gameObject = transform.gameObject,
-                            screenPosition = eventPosition,
-                            distance = distance,
-                            displayIndex = displayIndex,
-                            index = resultAppendList.Count,
-                            depth = pair.Value.depth,
-                            sortingLayer = sortingLayerID,
-                            sortingOrder = sortingOrder,
-                            worldPosition = ray.origin + ray.direction * distance,
-                            worldNormal = -forward
-                        });
+                            // http://geomalgorithms.com/a06-_intersect-2.html
+                            distance = (Vector3.Dot(forward, transform.position - ray.origin) / Vector3.Dot(forward, ray.direction));
+
+                            // Check to see if the go is behind the camera.
+                            /*if (distance < 0.0f)
+                                continue;
+                        }
+
+                        resultAppendList.Add(
+                            new RaycastResult()
+                            {
+                                module = this,
+                                gameObject = transform.gameObject,
+                                screenPosition = eventPosition,
+                                distance = distance,
+                                displayIndex = displayIndex,
+                                index = resultAppendList.Count,
+                                depth = pair.Value.depth,
+                                sortingLayer = sortingLayerID,
+                                sortingOrder = sortingOrder,
+                                worldPosition = ray.origin + ray.direction * distance,
+                                worldNormal = -forward
+                            });
+                    }
                 }
-            }
+            }*/
 
             count = resultAppendList.Count - count;
 
