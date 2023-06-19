@@ -304,6 +304,9 @@ namespace ZG
 
         void Awake()
         {
+            if (silhouetteShader == null)
+                enabled = false;
+
             if (IRenderBlurOutline.instance == null)
                 IRenderBlurOutline.instance = this;
         }
