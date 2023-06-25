@@ -5,10 +5,18 @@ namespace ZG
 {
     public class ComponentManager<T> : MonoBehaviour where T : Component
     {
+        public class Instances : Map<T>
+        {
+
+        }
+
         private static Dictionary<string, T> __values;
 
         [SerializeField]
         internal T[] _values;
+
+        [SerializeField, Map]
+        internal Instances _instances;
 
         public static T Find(string name)
         {
@@ -28,8 +36,15 @@ namespace ZG
                 foreach (var value in _values)
                     __values.Add(value.name, value);
             }
-            else
-                Debug.LogError($"Empty {nameof(T)} Manager {name}", this);
+
+            if(_instances != null && _instances.Count > 0)
+            {
+                if (__values == null)
+                    __values = new Dictionary<string, T>();
+
+                foreach (var pair in _instances)
+                    __values.Add(pair.Key, pair.Value);
+            }
         }
 
         void OnDisable()
@@ -38,6 +53,12 @@ namespace ZG
             {
                 foreach (var value in _values)
                     __values.Remove(value.name);
+            }
+
+            if (_instances != null)
+            {
+                foreach (var pair in _instances)
+                    __values.Remove(pair.Key);
             }
         }
     }
