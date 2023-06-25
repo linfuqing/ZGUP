@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -5,6 +6,7 @@ namespace ZG
 {
     public class ComponentManager<T> : MonoBehaviour where T : Component
     {
+        [Serializable]
         public class Instances : Map<T>
         {
 
