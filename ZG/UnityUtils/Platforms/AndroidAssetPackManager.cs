@@ -4,6 +4,7 @@ using System.Collections;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Android;
+using System.Xml.Linq;
 
 namespace ZG
 {
@@ -98,13 +99,13 @@ namespace ZG
         public const string NAME_PREFIX = "Android@";
 
         public readonly string Name;
-        public readonly AndroidAssetPack Operation;
+        public readonly GetAssetPackStateAsyncOperation Operation;
 
         public bool isDone
         {
             get
             {
-                return Operation.size > 0;
+                return Operation.isDone;
             }
         }
 
@@ -122,7 +123,7 @@ namespace ZG
 
         public static string GetName(string name) => NAME_PREFIX + name;
 
-        public AndroidAssetPackHeader(AndroidAssetPack operation)
+        public AndroidAssetPackHeader(GetAssetPackStateAsyncOperation operation)
         {
             Name = name;
             Operation = operation;
@@ -172,7 +173,7 @@ namespace ZG
             get
             {
                 if (__header == null)
-                    __header = new AndroidAssetPackHeader(this);
+                    __header = new AndroidAssetPackHeader(AndroidAssetPacks.GetAssetPackStateAsync(new string[] { Name }));
 
                 return __header;
             }
@@ -226,7 +227,14 @@ namespace ZG
 
             Name = name;
 
-            AndroidAssetPacks.DownloadAssetPackAsync(new string[] { name }, __Callback);
+            if(new AndroidAssetPackLocation(name).isVail)
+            {
+                downloadProgress = 1.0f;
+
+                isDone = true;
+            }
+            else
+                AndroidAssetPacks.DownloadAssetPackAsync(new string[] { name }, __Callback);
 
             AssetUtility.Register(AndroidAssetPackHeader.GetName(name), this);
         }

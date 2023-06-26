@@ -27,7 +27,7 @@ namespace ZG
 
         void OnEnable()
         {
-            if (_values == null || _values.Length < 1)
+            if ((_values == null || _values.Length < 1) && (_instances == null || _instances.Count < 1))
                 _values = GetComponents<T>();
 
             if (_values != null && _values.Length > 0)
