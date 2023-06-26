@@ -1,13 +1,20 @@
 using System;
 using System.IO;
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Android;
-using System.Xml.Linq;
 
 namespace ZG
 {
+    public enum AndroidAssetPackType
+    {
+        InstallTime, 
+        FastFollow, 
+        OnDemand
+    }
+
     public struct AndroidAssetPackLocation
     {
         public ulong offset;
@@ -134,17 +141,33 @@ namespace ZG
     {
         public static RequestToUseMobileDataAsyncOperation __userConfirmationOperation = null;
 
+        public readonly AndroidAssetPackType Type;
         public readonly bool IsOverridePath;
         public readonly string Path;
         public readonly string Name;
 
         private AndroidAssetPackHeader __header;
 
+        private static DownloadAssetPackAsyncOperation __operation;
+
         public bool isDone
         {
-            get;
+            get
+            {
+                if (Type != AndroidAssetPackType.InstallTime)
+                    return status == AndroidAssetPackStatus.Completed;
 
-            private set;
+                if (__operation == null)
+                {
+                    downloadProgress = 1.0f;
+
+                    return true;
+                }
+
+                downloadProgress = __operation.progress;
+
+                return __operation.isDone;
+            }
         }
 
         public AndroidAssetPackStatus status
@@ -173,10 +196,34 @@ namespace ZG
             get
             {
                 if (__header == null)
-                    __header = new AndroidAssetPackHeader(AndroidAssetPacks.GetAssetPackStateAsync(new string[] { Name }));
+                {
+                    if (Type == AndroidAssetPackType.InstallTime)
+                    {
+                        string[] coreUnityAssetPackNames = AndroidAssetPacks.GetCoreUnityAssetPackNames();
+                        if (coreUnityAssetPackNames != null && coreUnityAssetPackNames.Length > 0)
+                            __header = new AndroidAssetPackHeader(AndroidAssetPacks.GetAssetPackStateAsync(coreUnityAssetPackNames));
+                    }
+                    else
+                        __header = new AndroidAssetPackHeader(AndroidAssetPacks.GetAssetPackStateAsync(new string[] { Name }));
+                }
 
                 return __header;
             }
+        }
+
+        public static string GetLocationPath(bool isOverridePath, string path, string name)
+        {
+            string result;
+            if (isOverridePath)
+            {
+                result = System.IO.Path.GetFileName(name);
+                if (!string.IsNullOrEmpty(path))
+                    result = System.IO.Path.Combine(path, result);
+            }
+            else
+                result = name;
+
+            return result;
         }
 
         public bool Contains(string name)
@@ -192,16 +239,7 @@ namespace ZG
             out ulong fileOffset,
             out string filePath)
         {
-            string path;
-            if (IsOverridePath)
-            {
-                path = System.IO.Path.GetFileName(name);
-                if (!string.IsNullOrEmpty(Path))
-                    path = System.IO.Path.Combine(Path, path);
-            }
-            else
-                path = name;
-
+            string path = GetLocationPath(IsOverridePath, Path, name);
             var location = new AndroidAssetPackLocation(path);
             if (!location.isVail)
             {
@@ -219,24 +257,46 @@ namespace ZG
             return true;
         }
 
-        public AndroidAssetPack(bool isOverridePath, string path, string name)
+        public AndroidAssetPack(AndroidAssetPackType type, bool isOverridePath, string path, string name)
         {
+            Type = type;
+
             IsOverridePath = isOverridePath;
 
             Path = path;
 
             Name = name;
 
-            if(new AndroidAssetPackLocation(name).isVail)
+            if (type == AndroidAssetPackType.InstallTime)
             {
-                downloadProgress = 1.0f;
+                if (__operation == null)
+                {
+                    string[] coreUnityAssetPackNames = AndroidAssetPacks.GetCoreUnityAssetPackNames();
+                    if (coreUnityAssetPackNames == null || coreUnityAssetPackNames.Length < 1)
+                    {
+                        downloadProgress = 1.0f;
 
-                isDone = true;
+                        status = AndroidAssetPackStatus.Completed;
+                    }
+                    else
+                        __operation = AndroidAssetPacks.DownloadAssetPackAsync(coreUnityAssetPackNames);
+                }
+
+                AssetUtility.Register(AndroidAssetPackHeader.GetName(name), new AssetPackLocator());
             }
             else
-                AndroidAssetPacks.DownloadAssetPackAsync(new string[] { name }, __Callback);
+            {
+                if (new AndroidAssetPackLocation(GetLocationPath(isOverridePath, path, name)).isVail)
+                {
+                    downloadProgress = 1.0f;
 
-            AssetUtility.Register(AndroidAssetPackHeader.GetName(name), this);
+                    status = AndroidAssetPackStatus.Completed;
+                }
+                else
+                    AndroidAssetPacks.DownloadAssetPackAsync(new string[] { name }, __Callback);
+
+                AssetUtility.Register(AndroidAssetPackHeader.GetName(name), this);
+            }
         }
 
         public bool Update(ref string filePath, ref ulong fileOffset)
@@ -265,7 +325,10 @@ namespace ZG
                 return null;
             }
 
-            return new AndroidAssetPackEnumerator(size, location, targetPath);
+            return new AndroidAssetPackEnumerator(
+                size, 
+                location, 
+                targetPath);
         }
 
         private void __Callback(AndroidAssetPackInfo androidAssetPackInfo)
@@ -280,16 +343,14 @@ namespace ZG
                     case AndroidAssetPackStatus.Pending:
                     case AndroidAssetPackStatus.Downloading:
                     case AndroidAssetPackStatus.Transferring:
-                        size = androidAssetPackInfo.size;
 
                         downloadProgress = (float)(androidAssetPackInfo.bytesDownloaded * 1.0 / androidAssetPackInfo.size);
                         break;
                     case AndroidAssetPackStatus.Completed:
-                        size = androidAssetPackInfo.size;
-
                         downloadProgress = 1.0f;
 
-                        isDone = true;
+                        size = androidAssetPackInfo.size;
+
                         break;
                     case AndroidAssetPackStatus.WaitingForWifi:
 
@@ -342,6 +403,8 @@ namespace ZG
         {
             public string name;
 
+            public AndroidAssetPackType type;
+
             public bool isOverridePath;
 
             public string packPath;
@@ -351,14 +414,17 @@ namespace ZG
 
         private class Factory : IAssetPackFactory
         {
+            public readonly AndroidAssetPackType Type;
+
             public readonly bool IsOverridePath;
             public readonly string PackPath;
             public readonly string PackName;
 
-            private AndroidAssetPack __pack;
+            private IAssetPack __pack;
 
-            public Factory(bool isOverridePath, string packPath, string packName)
+            public Factory(AndroidAssetPackType type, bool isOverridePath, string packPath, string packName)
             {
+                Type = type;
                 IsOverridePath = isOverridePath;
                 PackPath = packPath;
                 PackName = packName;
@@ -367,7 +433,7 @@ namespace ZG
             public IAssetPack Retrieve()
             {
                 if (__pack == null)
-                    __pack = new AndroidAssetPack(IsOverridePath, PackPath, PackName);
+                    __pack = new AndroidAssetPack(Type, IsOverridePath, PackPath, PackName);
 
                 return __pack;
             }
