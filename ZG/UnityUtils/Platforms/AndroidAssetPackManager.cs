@@ -449,7 +449,7 @@ namespace ZG
                 Factory factory;
                 foreach (var pack in packs)
                 {
-                    factory = new Factory(pack.isOverridePath, pack.packPath, pack.name);
+                    factory = new Factory(pack.type, pack.isOverridePath, pack.packPath, pack.name);
                     foreach(var filePath in pack.filePaths)
                         AssetUtility.Register(filePath, factory);
                 }
