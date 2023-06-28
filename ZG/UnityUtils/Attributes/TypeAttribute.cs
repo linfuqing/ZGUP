@@ -5,11 +5,11 @@ namespace ZG
 {
     public class TypeAttribute : PropertyAttribute
     {
-        public Type[] attributeTypes;
+        public Type[] interfaceOrAttributeTypes;
 
-        public TypeAttribute(params Type[] attributeTypes)
+        public TypeAttribute(params Type[] interfaceOrAttributeTypes)
         {
-            this.attributeTypes = attributeTypes;
+            this.interfaceOrAttributeTypes = interfaceOrAttributeTypes;
         }
     }
 }

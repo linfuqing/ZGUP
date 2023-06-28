@@ -9,7 +9,7 @@ namespace ZG
     [CustomPropertyDrawer(typeof(TypeAttribute))]
     public class TypeDrawer : PropertyDrawer
     {
-        private static Dictionary<Type, List<Type>> __attributeTypes;
+        private static Dictionary<Type, List<Type>> __types;
 
         private string[] __options;
 
@@ -17,9 +17,9 @@ namespace ZG
         {
             List<Type> types;
 
-            if (__attributeTypes == null)
+            if (__types == null)
             {
-                __attributeTypes = new Dictionary<Type, List<Type>>();
+                __types = new Dictionary<Type, List<Type>>();
 
                 foreach (var assemble in AppDomain.CurrentDomain.GetAssemblies())
                 {
@@ -27,16 +27,27 @@ namespace ZG
                     {
                         foreach(var attribute in type.GetCustomAttributesData())
                         {
-                            if(!__attributeTypes.TryGetValue(attribute.AttributeType, out types))
+                            if(!__types.TryGetValue(attribute.AttributeType, out types))
                             {
                                 types = new List<Type>();
 
-                                __attributeTypes[attribute.AttributeType] = types;
+                                __types[attribute.AttributeType] = types;
                             }
 
                             types.Add(type);
                         }
 
+                        foreach(var interfaceType in  type.GetInterfaces())
+                        {
+                            if (!__types.TryGetValue(interfaceType, out types))
+                            {
+                                types = new List<Type>();
+
+                                __types[interfaceType] = types;
+                            }
+
+                            types.Add(type);
+                        }
                     }
                 }
             }
@@ -48,9 +59,9 @@ namespace ZG
                 if (__options == null)
                 {
                     var options = new List<string>();
-                    foreach (var attributeType in attribute.attributeTypes)
+                    foreach (var interfaceOrAttributeType in attribute.interfaceOrAttributeTypes)
                     {
-                        if (__attributeTypes.TryGetValue(attributeType, out types))
+                        if (__types.TryGetValue(interfaceOrAttributeType, out types))
                         {
                             foreach (var type in types)
                                 options.Add(type.AssemblyQualifiedName);
