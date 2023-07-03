@@ -1239,6 +1239,7 @@ namespace ZG
             long responseCode;
             string fileName, url, fullURL, packName, filePath;
             IAssetPackHeader packHeader;
+            Exception exception;
             (ulong, string) fileOffsetAndPath;
             Writer writer;
             byte[] md5hash, preallocatedBuffer = null;
@@ -1397,7 +1398,7 @@ namespace ZG
                                                             numAssets);
                                                     }
 
-                                                    var exception = task.Exception;
+                                                    exception = task.Exception;
                                                     if (exception != null)
                                                     {
                                                         Debug.LogException(exception.InnerException ?? exception);
@@ -1636,7 +1637,7 @@ namespace ZG
                                             Debug.LogError(e.InnerException ?? e);
                                         }
 
-                                        var exception = task.Exception;
+                                        exception = task.Exception;
                                         if (exception != null)
                                         {
                                             Debug.LogException(exception.InnerException ?? exception);
@@ -1644,6 +1645,9 @@ namespace ZG
                                             break;
                                         }
                                     } while (!task.IsCompleted);
+
+                                    if (exception == null && !isForce)
+                                        break;
                                 }
                             } while (assetIndex < assetCount);
                         }

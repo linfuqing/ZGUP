@@ -199,12 +199,23 @@ namespace ZG
                 {
                     if (Type == AndroidAssetPackType.InstallTime)
                     {
+                        Debug.Log("Begin GetCoreUnityAssetPackNames");
                         string[] coreUnityAssetPackNames = AndroidAssetPacks.GetCoreUnityAssetPackNames();
+                        Debug.Log("End GetCoreUnityAssetPackNames");
+
                         if (coreUnityAssetPackNames != null && coreUnityAssetPackNames.Length > 0)
+                        {
+                            Debug.Log("Begin GetAssetPackStateAsync");
                             __header = new AndroidAssetPackHeader(AndroidAssetPacks.GetAssetPackStateAsync(coreUnityAssetPackNames));
+                            Debug.Log("End GetAssetPackStateAsync");
+                        }
                     }
                     else
+                    {
+                        Debug.Log($"Begin GetAssetPackStateAsync {Name}");
                         __header = new AndroidAssetPackHeader(AndroidAssetPacks.GetAssetPackStateAsync(new string[] { Name }));
+                        Debug.Log("End GetAssetPackStateAsync");
+                    }
                 }
 
                 return __header;
@@ -271,7 +282,10 @@ namespace ZG
             {
                 if (__operation == null)
                 {
+                    Debug.Log("Begin GetCoreUnityAssetPackNames");
                     string[] coreUnityAssetPackNames = AndroidAssetPacks.GetCoreUnityAssetPackNames();
+                    Debug.Log("End GetCoreUnityAssetPackNames");
+
                     if (coreUnityAssetPackNames == null || coreUnityAssetPackNames.Length < 1)
                     {
                         downloadProgress = 1.0f;
@@ -279,7 +293,11 @@ namespace ZG
                         status = AndroidAssetPackStatus.Completed;
                     }
                     else
+                    {
+                        Debug.Log("Begin DownloadAssetPackAsync");
                         __operation = AndroidAssetPacks.DownloadAssetPackAsync(coreUnityAssetPackNames);
+                        Debug.Log("End DownloadAssetPackAsync");
+                    }
                 }
 
                 AssetUtility.Register(AndroidAssetPackHeader.GetName(name), new AssetPackLocator());
