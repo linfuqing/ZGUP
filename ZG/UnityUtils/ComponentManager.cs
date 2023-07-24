@@ -4,15 +4,20 @@ using UnityEngine;
 
 namespace ZG
 {
+    public interface IComponentWrapper
+    {
+        UnityEngine.Object As(string key);
+    }
+
     public class ComponentManager<T> : MonoBehaviour where T : Component
     {
         [Serializable]
-        public class Instances : Map<T>
+        public class Instances : Map<UnityEngine.Object>
         {
 
         }
 
-        private static Dictionary<string, T> __values;
+        private static Dictionary<string, UnityEngine.Object> __values;
 
         [SerializeField]
         internal T[] _values;
@@ -20,12 +25,12 @@ namespace ZG
         [SerializeField, Map]
         internal Instances _instances;
 
-        public static T Find(string name)
+        public static T Find(string key)
         {
-            return __values != null && __values.TryGetValue(name, out var value) ? value : default;
+            return __values != null && __values.TryGetValue(key, out var value) ? __As(key, value) : default;
         }
 
-        void OnEnable()
+        protected void OnEnable()
         {
             if ((_values == null || _values.Length < 1) && (_instances == null || _instances.Count < 1))
                 _values = GetComponents<T>();
@@ -33,7 +38,7 @@ namespace ZG
             if (_values != null && _values.Length > 0)
             {
                 if (__values == null)
-                    __values = new Dictionary<string, T>();
+                    __values = new Dictionary<string, UnityEngine.Object>();
 
                 foreach (var value in _values)
                     __values.Add(value.name, value);
@@ -42,14 +47,14 @@ namespace ZG
             if(_instances != null && _instances.Count > 0)
             {
                 if (__values == null)
-                    __values = new Dictionary<string, T>();
+                    __values = new Dictionary<string, UnityEngine.Object>();
 
                 foreach (var pair in _instances)
                     __values.Add(pair.Key, pair.Value);
             }
         }
 
-        void OnDisable()
+        protected void OnDisable()
         {
             if (_values != null)
             {
@@ -62,6 +67,12 @@ namespace ZG
                 foreach (var pair in _instances)
                     __values.Remove(pair.Key);
             }
+        }
+
+        private static T __As(string key, UnityEngine.Object target)
+        {
+            var wrapper = target as IComponentWrapper;
+            return (wrapper == null ? target : wrapper.As(key)) as T;
         }
     }
 
