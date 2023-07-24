@@ -12,6 +12,12 @@ namespace ZG
             public string name;
 #endif
             public UnityEvent value;
+
+            public void Invoke()
+            {
+                if (value != null)
+                    value.Invoke();
+            }
         }
 
         public Event[] events;
