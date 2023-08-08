@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace ZG
 {
@@ -74,8 +75,10 @@ namespace ZG
             return __handlers.RemoveAt(handle.index);
         }
 
-        public static CallbackHandle Register(T value)
+        public static CallbackHandle Register([NotNull]T value)
         {
+            UnityEngine.Assertions.Assert.IsNotNull(value);
+
             if (__handlers == null)
                 __handlers = new Pool<Handler>();
 
