@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace ZG
 {
-    [Serializable]
+    //[Serializable]
     public struct CallbackHandle : IEquatable<CallbackHandle>
     {
         public int index;
@@ -27,7 +27,7 @@ namespace ZG
         }
     }
 
-    [Serializable]
+        //[Serializable]
     public struct CallbackHandle<T> : IEquatable<CallbackHandle<T>>
     {
         public CallbackHandle value;

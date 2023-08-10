@@ -48,12 +48,14 @@ namespace ZG
                 if (__values == null)
                     __values = new Dictionary<string, UnityEngine.Object>();
 
+                string key;
                 foreach (var value in _values)
                 {
-                    __values.Add(value.name, value);
+                    key = value.name;
+                    __values.Add(key, value);
 
                     if (onChanged != null)
-                        onChanged(value.name, value);
+                        onChanged(key, value);
                 }
             }
 
@@ -72,7 +74,7 @@ namespace ZG
                     __values.Add(key, value);
 
                     if (onChanged != null)
-                        onChanged(value.name, __As(key, value));
+                        onChanged(key, __As(key, value));
                 }
             }
         }
