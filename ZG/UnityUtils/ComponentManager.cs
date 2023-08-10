@@ -25,6 +25,14 @@ namespace ZG
         [SerializeField, Map]
         internal Instances _instances;
 
+        public static Action<string, T> onChanged;
+
+        public static void Change(string key)
+        {
+            if (onChanged != null)
+                onChanged(key, Find(key));
+        }
+
         public static T Find(string key)
         {
             return __values != null && __values.TryGetValue(key, out var value) ? __As(key, value) : default;
@@ -41,7 +49,12 @@ namespace ZG
                     __values = new Dictionary<string, UnityEngine.Object>();
 
                 foreach (var value in _values)
+                {
                     __values.Add(value.name, value);
+
+                    if (onChanged != null)
+                        onChanged(value.name, value);
+                }
             }
 
             if(_instances != null && _instances.Count > 0)
@@ -49,8 +62,18 @@ namespace ZG
                 if (__values == null)
                     __values = new Dictionary<string, UnityEngine.Object>();
 
+                string key;
+                UnityEngine.Object value;
                 foreach (var pair in _instances)
-                    __values.Add(pair.Key, pair.Value);
+                {
+                    key = pair.Key;
+                    value = pair.Value;
+
+                    __values.Add(key, value);
+
+                    if (onChanged != null)
+                        onChanged(value.name, __As(key, value));
+                }
             }
         }
 
@@ -59,13 +82,27 @@ namespace ZG
             if (_values != null)
             {
                 foreach (var value in _values)
-                    __values.Remove(value.name);
+                {
+                    if (__values.Remove(value.name))
+                    {
+                        if(onChanged != null)
+                            onChanged(value.name, default);
+                    }
+                }
             }
 
             if (_instances != null)
             {
+                string key;
                 foreach (var pair in _instances)
-                    __values.Remove(pair.Key);
+                {
+                    key = pair.Key;
+                    if (__values.Remove(key))
+                    {
+                        if (onChanged != null)
+                            onChanged(key, default);
+                    }
+                }
             }
         }
 
