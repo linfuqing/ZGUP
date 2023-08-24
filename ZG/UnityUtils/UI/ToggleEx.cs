@@ -214,7 +214,7 @@ namespace ZG
 
         public override void OnSubmit(BaseEventData eventData)
         {
-            //base.OnSubmit(eventData);
+            base.OnSubmit(eventData);
         }
 
         public override bool IsActive()
