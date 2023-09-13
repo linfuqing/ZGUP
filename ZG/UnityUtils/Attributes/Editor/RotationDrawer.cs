@@ -48,6 +48,10 @@ namespace ZG
 
                     position.y += singleLineHeight;
 
+                    value[0] = Mathf.Floor(value.x / 1E-06f) * 1E-06f;
+                    value[1] = Mathf.Floor(value.y / 1E-06f) * 1E-06f;
+                    value[2] = Mathf.Floor(value.z / 1E-06f) * 1E-06f;
+
                     EditorGUI.BeginChangeCheck();
                     var rotation = EditorGUI.Vector3Field(position, property.displayName, value);
                     isDirty |= EditorGUI.EndChangeCheck();

@@ -34,8 +34,8 @@ namespace ZG.Mathematics
                 float3 right = math.abs(this.right),
                         up = math.abs(this.up),
                         forward = math.abs(this.forward),
-                        extents = this.extents,
-                        center = this.center;
+                        extents = this.extents;//,
+                        //center = this.center;
 
                 return right * extents.x + up * extents.y + forward * extents.z;
             }
@@ -65,7 +65,7 @@ namespace ZG.Mathematics
             }
         }
         
-        public Box(float3 center, float3 extents, quaternion rotation)
+        public Box(in float3 center, in float3 extents, in quaternion rotation)
         {
             min = center - extents;
             max = center + extents;
@@ -107,7 +107,7 @@ namespace ZG.Mathematics
             rightDownBackward = center + right - up - forward;
         }
 
-        public void GetInterval(float3 onNormal, out float min, out float max)
+        public void GetInterval(in float3 onNormal, out float min, out float max)
         {
             float3 leftUpForward, leftDownForward, rightUpForward, rightDownForward,
                 leftUpBackward, leftDownBackward, rightUpBackward, rightDownBackward;
@@ -162,7 +162,7 @@ namespace ZG.Mathematics
             return math.all(point > min) && math.all(point < max);
         }
 
-        public bool Test(Box other, float3 onNormal)
+        public bool Test(in Box other, in float3 onNormal)
         {
             float sourceMin, sourceMax, destinationMin, destinationMax;
             GetInterval(onNormal, out sourceMin, out sourceMax);
@@ -173,7 +173,7 @@ namespace ZG.Mathematics
             return true;
         }
 
-        public bool Test(Box other)
+        public bool Test(in Box other)
         {
             float3 sourceRight = right, sourceUp = up, sourceForward = forward,
                 destinationRight = other.right, destinationUp = other.up, destinationForward = other.forward;
@@ -236,7 +236,7 @@ namespace ZG.Mathematics
             return math.all(center > min - radius) && math.all(center < max + radius);
         }
 
-        public float3 ClosestPoint(float3 point)
+        public float3 ClosestPoint(in float3 point)
         {
             float3 result = center,
                 distance = point - result,
@@ -254,7 +254,7 @@ namespace ZG.Mathematics
             return result;
         }
         
-        public bool Raycast(float3 origin, float3 direction, ref float distance, out float3 point, out float3 normal)
+        public bool Raycast(in float3 origin, in float3 direction, ref float distance, out float3 point, out float3 normal)
         {
             float3 center = this.center;
             quaternion inverRot = math.inverse(rotation);
