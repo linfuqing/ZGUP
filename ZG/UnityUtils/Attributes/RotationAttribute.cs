@@ -4,6 +4,7 @@ namespace ZG
 {
     public enum RotationType
     {
+        Normal, 
         Direction
     }
 
@@ -11,7 +12,7 @@ namespace ZG
     {
         public RotationType type;
 
-        public RotationAttribute(RotationType type)
+        public RotationAttribute(RotationType type = RotationType.Normal)
         {
             this.type = type;
         }

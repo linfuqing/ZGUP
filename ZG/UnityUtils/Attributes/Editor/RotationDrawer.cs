@@ -8,85 +8,86 @@ namespace ZG
     {
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            if (property.propertyType == SerializedPropertyType.Vector3)
+            float singleLineHeight = EditorGUIUtility.singleLineHeight;
+            position.height = singleLineHeight;
+
+            bool isExpanded = EditorGUI.Foldout(position, property.isExpanded, property.displayName);
+            property.isExpanded = isExpanded;
+            if (isExpanded)
             {
-                float singleLineHeight = EditorGUIUtility.singleLineHeight;
-                position.height = singleLineHeight;
+                ++EditorGUI.indentLevel;
 
-                bool isExpanded = EditorGUI.Foldout(position, property.isExpanded, property.displayName);
-                property.isExpanded = isExpanded;
-                if (isExpanded)
+                position.y += singleLineHeight;
+
+                bool isEmpty = true, isDirty = false;
+
+                var type = ((RotationAttribute)attribute).type;
+
+                switch (type)
                 {
-                    ++EditorGUI.indentLevel;
+                    case RotationType.Normal:
+                        isDirty = EditorGUI.PropertyField(position, property, true);
 
-                    position.y += singleLineHeight;
+                        if (property.propertyType == SerializedPropertyType.Quaternion)
+                            isEmpty = default == property.quaternionValue;
+                        break;
+                    case RotationType.Direction:
+                        if (property.propertyType == SerializedPropertyType.Vector3)
+                        {
+                            var value = property.vector3Value;
+                            isEmpty = Vector3.zero == value;
+                            value = isEmpty ? Vector3.zero : Quaternion.FromToRotation(Vector3.forward, value).eulerAngles;
 
-                    bool isEmpty = true, isDirty = false;
+                            EditorGUI.BeginChangeCheck();
+                            var rotation = EditorGUI.Vector3Field(position, property.displayName, value);
+                            isDirty = EditorGUI.EndChangeCheck();
 
-                    var type = ((RotationAttribute)attribute).type;
+                            if (isDirty)
+                                property.vector3Value = Quaternion.Euler(rotation) * Vector3.forward;
+                        }
+                        else
+                        {
+                            EditorGUI.HelpBox(position, "Need Vector3.", MessageType.Error);
 
-                    Vector3 value;
+                            return;
+                        }
+                        break;
+                    default:
+                        break;
+                }
 
-                    var transform = EditorGUI.ObjectField(position, "Transform", null, typeof(Transform), true) as Transform;
-                    if (transform == null)
+
+                position.y += singleLineHeight;
+
+                if (isEmpty && !isDirty)
+                    GUI.Box(position, "Empty");
+                else
+                {
+                    if (GUI.Button(position, "Clear"))
                     {
-                        value = property.vector3Value;
                         switch (type)
                         {
+                            case RotationType.Normal:
+
+                                property.quaternionValue = default;
+
+                                break;
+
                             case RotationType.Direction:
-                                isEmpty = Vector3.zero == value;
-                                value = isEmpty ? Vector3.zero : Quaternion.FromToRotation(Vector3.forward, value).eulerAngles;
+
+                                property.vector3Value = Vector3.zero;
                                 break;
                         }
                     }
-                    else
-                    {
-                        isDirty = true;
-
-                        value = transform.localRotation.eulerAngles;
-                    }
-
-                    position.y += singleLineHeight;
-
-                    value[0] = Mathf.Floor(value.x / 1E-06f) * 1E-06f;
-                    value[1] = Mathf.Floor(value.y / 1E-06f) * 1E-06f;
-                    value[2] = Mathf.Floor(value.z / 1E-06f) * 1E-06f;
-
-                    EditorGUI.BeginChangeCheck();
-                    var rotation = EditorGUI.Vector3Field(position, property.displayName, value);
-                    isDirty |= EditorGUI.EndChangeCheck();
-
-                    position.y += singleLineHeight;
-
-                    if (isEmpty && !isDirty)
-                        GUI.Box(position, "Empty");
-                    else
-                    {
-                        if (GUI.Button(position, "Clear"))
-                            property.vector3Value = Vector3.zero;
-                        else if (isDirty)
-                        {
-                            switch (type)
-                            {
-                                case RotationType.Direction:
-
-                                    property.vector3Value = Quaternion.Euler(rotation) * Vector3.forward;
-
-                                    break;
-                            }
-                        }
-                    }
-
-                    --EditorGUI.indentLevel;
                 }
+
+                --EditorGUI.indentLevel;
             }
-            else
-                EditorGUI.HelpBox(position, "Need Vector3.", MessageType.Error);
         }
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return property.isExpanded ? EditorGUIUtility.singleLineHeight * 4.0f : EditorGUIUtility.singleLineHeight;
+            return property.isExpanded ? EditorGUIUtility.singleLineHeight * 3.0f : EditorGUIUtility.singleLineHeight;
         }
     }
 }
