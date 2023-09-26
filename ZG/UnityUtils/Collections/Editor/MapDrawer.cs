@@ -262,7 +262,7 @@ namespace ZG
                                     temp,
                                     keyContent,
                                     mapAttribute.path,
-                                    mapAttribute.relativePropertyPath,
+                                    //mapAttribute.relativePropertyPath,
                                     mapAttribute.emptyName,
                                     mapAttribute.emptyValue,
                                     mapAttribute.nameKey,

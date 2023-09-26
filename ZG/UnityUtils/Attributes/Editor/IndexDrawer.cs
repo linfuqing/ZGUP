@@ -13,7 +13,7 @@ namespace ZG
             SerializedProperty property,
             GUIContent label,
             string path,
-            string relativePropertyPath,
+            //string relativePropertyPath,
             string emptyName,
             string emptyValue, 
             string nameKey,
@@ -270,7 +270,8 @@ namespace ZG
                         index = !isEmptyName || index > 0 ? source[name] : -1;
                         property.intValue = index;
 
-                        property = property.GetParent();
+                        isDirty = true;
+                        /*property = property.GetParent();
                         property = property == null ? null : property.FindPropertyRelative(relativePropertyPath);
                         if (property != null)
                         {
@@ -287,7 +288,7 @@ namespace ZG
                                     isDirty = true;
                                     break;
                             }
-                        }
+                        }*/
                     }
                     else if (fieldInfo != null)
                     {
@@ -410,7 +411,8 @@ namespace ZG
                         index = isEmptyValue ? -1 : source[name];
                         property.stringValue = isEmptyValue ? emptyValue : name;
 
-                        property = property.GetParent();
+                        isDirty = true;
+                        /*property = property.GetParent();
                         property = property == null ? null : property.FindPropertyRelative(relativePropertyPath);
                         if (property != null)
                         {
@@ -427,7 +429,7 @@ namespace ZG
                                     isDirty = true;
                                     break;
                             }
-                        }
+                        }*/
                     }
                 }
                 else if (position.Contains(Event.current.mousePosition))
@@ -458,7 +460,6 @@ namespace ZG
                     null, 
                     null, 
                     null, 
-                    null, 
                     0, 
                     0, 
                     fieldInfo);
@@ -468,7 +469,7 @@ namespace ZG
                     property, 
                     label, 
                     attribute.path, 
-                    attribute.relativePropertyPath, 
+                    //attribute.relativePropertyPath, 
                     attribute.emptyName,
                     attribute.emptyValue,
                     attribute.nameKey, 

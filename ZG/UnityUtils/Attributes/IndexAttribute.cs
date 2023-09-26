@@ -4,7 +4,7 @@ namespace ZG
 {
     public class IndexAttribute : PropertyAttribute
     {
-        public string relativePropertyPath;
+        //public string relativePropertyPath;
         public string emptyName;
         public string emptyValue;
         public string nameKey;
