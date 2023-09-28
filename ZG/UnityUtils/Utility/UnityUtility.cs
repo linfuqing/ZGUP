@@ -92,6 +92,22 @@ namespace ZG
             return System.Array.Find(UnityEngine.UI.Selectable.allSelectablesArray, x => x is UnityEngine.UI.InputField && ((UnityEngine.UI.InputField)x).isFocused) != null;
         }
 
+        public static bool IsActiveIn(this GameObject gameObject, Transform root)
+        {
+            if (gameObject == null)
+                return false;
+
+            if (gameObject.transform == root)
+                return true;
+
+            if (!gameObject.activeSelf)
+                return false;
+
+            var parent = gameObject.transform;
+            parent = parent == null ? null : parent.parent;
+            return IsActiveIn(parent == null ? null : parent.gameObject, root);
+        }
+
         public static void SetLayer(this GameObject gameObject, int layer)
         {
             if (gameObject == null)
