@@ -51,7 +51,7 @@ namespace ZG
 
     }
 
-    public static class UnityUtility
+    public static partial class UnityUtility
     {
         public readonly static Collider[] colliders = new Collider[256];
 

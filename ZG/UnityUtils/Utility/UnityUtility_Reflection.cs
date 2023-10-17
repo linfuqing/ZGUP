@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace ZG
 {
-    public static class UnityReflectionUtility
+    public static partial class UnityUtility
     {
         public struct EqualityComparer : System.Collections.IEqualityComparer
         {
