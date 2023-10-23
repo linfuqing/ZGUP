@@ -1,5 +1,9 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Threading;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Collections;
 using Unity.Mathematics;
+using System;
 
 namespace ZG.Mathematics
 {
@@ -627,5 +631,15 @@ namespace ZG.Mathematics
             y = temp;
         }
 
+        public static unsafe float InterlockedAdd(ref float location, float value)
+        {
+            float origin;
+            do
+            {
+                origin = location;
+            } while (Interlocked.CompareExchange(ref location, origin + value, origin) == origin);
+
+            return origin;
+        }
     }
 }
