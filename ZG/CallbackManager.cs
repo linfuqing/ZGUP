@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 
 namespace ZG
 {
@@ -93,6 +94,21 @@ namespace ZG
             return handle;
         }
 
+        public static bool Combine([NotNull] T value, in CallbackHandle handle)
+        {
+            UnityEngine.Assertions.Assert.IsNotNull(value);
+
+            if (__handlers == null || 
+                !__handlers.TryGetValue(handle.index, out var handler) || 
+                handler.version != handle.version)
+                return false;
+
+            handler.value = (T)Delegate.Combine(handler.value, value);
+            __handlers.Insert(handle.index, handler);
+
+            return true;
+        }
+
         public static bool Invoke(in CallbackHandle handle, out T value)
         {
             value = default;
@@ -122,13 +138,17 @@ namespace ZG
 
         public static CallbackHandle Register(this Action value) => CallbackManager<Action>.Register(value);
 
+        public static bool Combine(this Action value, in CallbackHandle handle) => CallbackManager<Action>.Combine(value, handle);
+
         public static CallbackHandle<T> Register<T>(this Action<T> value)
         {
             CallbackHandle<T> handle;
             handle.value = CallbackManager<Action<T>>.Register(value);
             return handle;
         }
-        
+
+        public static void Combine<T>(this Action<T> value, in CallbackHandle handle) => CallbackManager<Action<T>>.Combine(value, handle);
+
         public static bool Invoke(this in CallbackHandle handle)
         {
             if (!CallbackManager<Action>.Invoke(handle, out Action value))

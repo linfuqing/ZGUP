@@ -1,9 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Threading;
-using Unity.Collections.LowLevel.Unsafe;
-using Unity.Collections;
 using Unity.Mathematics;
-using System;
 
 namespace ZG.Mathematics
 {
@@ -633,13 +630,24 @@ namespace ZG.Mathematics
 
         public static unsafe float InterlockedAdd(ref float location, float value)
         {
+            UnityEngine.Assertions.Assert.IsFalse(math.isnan(location));
+            UnityEngine.Assertions.Assert.IsFalse(math.isfinite(location));
+            UnityEngine.Assertions.Assert.IsFalse(math.isinf(location));
+
+            UnityEngine.Assertions.Assert.IsFalse(math.isnan(value));
+            UnityEngine.Assertions.Assert.IsFalse(math.isfinite(value));
+            UnityEngine.Assertions.Assert.IsFalse(math.isinf(value));
+
+            if (value == 0.0f)
+                return location;
+
             float origin;
             do
             {
                 origin = location;
-            } while (Interlocked.CompareExchange(ref location, origin + value, origin) == origin);
+            } while (Interlocked.CompareExchange(ref location, origin + value, origin) != origin);
 
-            return origin;
+            return origin + value;
         }
     }
 }
