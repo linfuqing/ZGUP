@@ -54,42 +54,39 @@ namespace ZG
             public T value;
         }
 
-        private static Pool<Handler> __handlers;
+        private readonly static Pool<Handler> Handlers = new Pool<Handler>();
 
         public static bool IsVail(in CallbackHandle handle)
         {
-            if (__handlers == null)
-                return false;
-
             Handler handler;
-            return __handlers.TryGetValue(handle.index, out handler) && handler.version == handle.version;
+            return Handlers.TryGetValue(handle.index, out handler) && handler.version == handle.version;
         }
 
         public static bool Unregister(in CallbackHandle handle)
         {
-            if (__handlers == null)
+            if (Handlers == null)
                 return false;
 
-            if (!__handlers.TryGetValue(handle.index, out Handler handler) || handler.version != handle.version)
+            if (!Handlers.TryGetValue(handle.index, out Handler handler) || handler.version != handle.version)
                 return false;
 
-            return __handlers.RemoveAt(handle.index);
+            return Handlers.RemoveAt(handle.index);
         }
 
         public static CallbackHandle Register([NotNull]T value)
         {
             UnityEngine.Assertions.Assert.IsNotNull(value);
 
-            if (__handlers == null)
-                __handlers = new Pool<Handler>();
+            /*if (__handlers == null)
+                __handlers = new Pool<Handler>();*/
 
             CallbackHandle handle;
-            handle.index = __handlers.nextIndex;
-            __handlers.TryGetValue(handle.index, out Handler handler);
+            handle.index = Handlers.nextIndex;
+            Handlers.TryGetValue(handle.index, out Handler handler);
             handle.version = ++handler.version;
 
             handler.value = value;
-            __handlers.Insert(handle.index, handler);
+            Handlers.Insert(handle.index, handler);
 
             return handle;
         }
@@ -98,13 +95,13 @@ namespace ZG
         {
             UnityEngine.Assertions.Assert.IsNotNull(value);
 
-            if (__handlers == null || 
-                !__handlers.TryGetValue(handle.index, out var handler) || 
+            if (Handlers == null || 
+                !Handlers.TryGetValue(handle.index, out var handler) || 
                 handler.version != handle.version)
                 return false;
 
             handler.value = (T)Delegate.Combine(handler.value, value);
-            __handlers.Insert(handle.index, handler);
+            Handlers.Insert(handle.index, handler);
 
             return true;
         }
@@ -113,10 +110,10 @@ namespace ZG
         {
             value = default;
 
-            if (__handlers == null)
+            if (Handlers == null)
                 return false;
 
-            if (!__handlers.TryGetValue(handle.index, out Handler handler) ||
+            if (!Handlers.TryGetValue(handle.index, out Handler handler) ||
                 handler.version != handle.version)
                 return false;
 
@@ -208,7 +205,6 @@ namespace ZG
             try
             {
                 value(parameter);
-
             }
             catch (Exception e)
             {

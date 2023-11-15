@@ -291,7 +291,7 @@ namespace ZG
 
         public bool Unload()
         {
-            if (IsManaged)
+            if (IsManaged || Loader == null)
                 return false;
 
             if (Loader.Release() == 0)
@@ -323,7 +323,7 @@ namespace ZG
 
         public void Dispose()
         {
-            if (IsManaged)
+            if (IsManaged || Loader == null)
                 return;
 
             Loader.Release();

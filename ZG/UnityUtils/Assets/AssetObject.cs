@@ -1,18 +1,37 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 
 namespace ZG
 {
-    public abstract class AssetObject : MonoBehaviour
+    public class AssetObject : MonoBehaviour
     {
+        internal AssetBundleLoader<GameObject> _loader;
+
+        private void OnDestroy()
+        {
+            _loader.Dispose();
+        }
+    }
+
+    public abstract class AssetObjectBase : MonoBehaviour
+    {
+        public enum Space
+        {
+            Local, 
+            World
+        }
+
+        private AssetBundleLoader<GameObject> __loader;
+
         public event System.Action<GameObject> onCreated;
+
+        public abstract Space space { get; }
+
+        public abstract float time { get; }
 
         public abstract string fileName { get; }
 
         public abstract AssetManager assetManager { get; }
-
-        private string __assetName;
-
-        private string __fileName;
 
         public GameObject target
         {
@@ -23,41 +42,49 @@ namespace ZG
 
         protected void OnEnable()
         {
-            __assetName = name;
-            __fileName = fileName;
+            __loader = new AssetBundleLoader<GameObject>(fileName, name, assetManager);
 
-            StartCoroutine(assetManager.Load<GameObject>(__fileName, __assetName, null, (assetBundle, gameObject) =>
-            {
-                if (gameObject == null)
-                {
-                    Debug.LogError($"Asset Object {name} Load Fail.", this);
-
-                    return;
-                }
-
-                target = Instantiate(gameObject, transform);
-
-                //assetBundle.Unload(false);
-
-                //Destroy(assetBundle);
-
-                if (onCreated != null)
-                    onCreated(target);
-            }));
+            StartCoroutine(__Load());
         }
 
         protected void OnDisable()
         {
-            if (target != null)
+            if (target == null)
+                __loader.Dispose();
+            else
             {
-                Destroy(target);
+                Destroy(target, time);
 
                 target = null;
             }
 
-            var assetManager = this.assetManager;
+            /*var assetManager = this.assetManager;
             if(assetManager != null)
-                assetManager.Unload<GameObject>(__fileName, __assetName);
+                assetManager.Unload<GameObject>(__fileName, __assetName);*/
+        }
+
+        private IEnumerator __Load()
+        {
+            yield return __loader;
+
+            var gameObject = __loader.value;
+            if (gameObject == null)
+            {
+                Debug.LogError($"Asset Object {name} Load Fail.", this);
+
+                yield break;
+            }
+
+            var transform = this.transform;
+            gameObject = space == Space.World ? Instantiate(gameObject, transform.position, transform.rotation) : Instantiate(gameObject, transform);
+
+            var target = gameObject.AddComponent<AssetObject>();
+            target._loader = __loader;
+
+            __loader = default;
+
+            if (onCreated != null)
+                onCreated(gameObject);
         }
     }
 }
