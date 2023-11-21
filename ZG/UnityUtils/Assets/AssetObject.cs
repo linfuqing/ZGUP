@@ -49,14 +49,14 @@ namespace ZG
 
         protected void OnDisable()
         {
-            if (target == null)
-                __loader.Dispose();
-            else
+            if (target != null)
             {
                 Destroy(target, time);
 
                 target = null;
             }
+
+            __loader.Dispose();
 
             /*var assetManager = this.assetManager;
             if(assetManager != null)
@@ -80,6 +80,8 @@ namespace ZG
 
             var target = gameObject.AddComponent<AssetObject>();
             target._loader = __loader;
+
+            this.target = gameObject;
 
             __loader = default;
 
