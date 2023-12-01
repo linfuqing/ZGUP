@@ -23,6 +23,8 @@ namespace ZG
 
         private AssetBundleLoader<GameObject> __loader;
 
+        private GameObject __target;
+
         public event System.Action<GameObject> onCreated;
 
         public abstract Space space { get; }
@@ -35,9 +37,27 @@ namespace ZG
 
         public GameObject target
         {
-            get;
+            get
+            {
+                if (__target == null)
+                {
+                    var gameObject = __loader.value;
+                    if (gameObject != null)
+                    {
+                        var transform = this.transform;
+                        gameObject = space == Space.World ? Instantiate(gameObject, transform.position, transform.rotation) : Instantiate(gameObject, transform);
 
-            private set;
+                        var target = gameObject.AddComponent<AssetObject>();
+                        target._loader = __loader;
+
+                        __target = gameObject;
+                    }
+
+                    __loader = default;
+                }
+
+                return __target;
+            }
         }
 
         protected void OnEnable()
@@ -49,11 +69,22 @@ namespace ZG
 
         protected void OnDisable()
         {
-            if (target != null)
+            float time = this.time;
+            if (time > Mathf.Epsilon)
             {
-                Destroy(target, time);
+                var target = this.target;
+                if (target != null)
+                {
+                    Destroy(target, time);
 
-                target = null;
+                    __target = null;
+                }
+            }
+            else if(__target != null)
+            {
+                Destroy(__target);
+
+                __target = null;
             }
 
             __loader.Dispose();
@@ -67,23 +98,13 @@ namespace ZG
         {
             yield return __loader;
 
-            var gameObject = __loader.value;
+            var gameObject = target;
             if (gameObject == null)
             {
                 Debug.LogError($"Asset Object {name} Load Fail.", this);
 
                 yield break;
             }
-
-            var transform = this.transform;
-            gameObject = space == Space.World ? Instantiate(gameObject, transform.position, transform.rotation) : Instantiate(gameObject, transform);
-
-            var target = gameObject.AddComponent<AssetObject>();
-            target._loader = __loader;
-
-            this.target = gameObject;
-
-            __loader = default;
 
             if (onCreated != null)
                 onCreated(gameObject);
