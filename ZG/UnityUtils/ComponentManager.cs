@@ -48,11 +48,13 @@ namespace ZG
                 if (__values == null)
                     __values = new Dictionary<string, UnityEngine.Object>();
 
+                UnityEngine.Object origin;
                 string key;
                 foreach (var value in _values)
                 {
                     key = value.name;
-                    __values.Add(key, value);
+
+                    __values[key] = value;
 
                     if (onChanged != null)
                         onChanged(key, value);
@@ -71,7 +73,7 @@ namespace ZG
                     key = pair.Key;
                     value = pair.Value;
 
-                    __values.Add(key, value);
+                    __values[key] = value;
 
                     if (onChanged != null)
                         onChanged(key, __As(key, value));
@@ -81,11 +83,16 @@ namespace ZG
 
         protected void OnDisable()
         {
+            UnityEngine.Object target;
             if (_values != null)
             {
+                string name;
                 foreach (var value in _values)
                 {
-                    if (__values.Remove(value.name))
+                    name = value.name;
+                    if (__values.TryGetValue(name, out target) && 
+                        target == value && 
+                        __values.Remove(name))
                     {
                         if(onChanged != null)
                             onChanged(value.name, default);
@@ -99,7 +106,9 @@ namespace ZG
                 foreach (var pair in _instances)
                 {
                     key = pair.Key;
-                    if (__values.Remove(key))
+                    if (__values.TryGetValue(key, out target) &&
+                        target == pair.Value && 
+                        __values.Remove(key))
                     {
                         if (onChanged != null)
                             onChanged(key, default);
