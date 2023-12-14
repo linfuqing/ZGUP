@@ -38,7 +38,7 @@ namespace ZG
             return __values != null && __values.TryGetValue(key, out var value) ? __As(key, value) : default;
         }
 
-        protected void OnEnable()
+        protected void Start()
         {
             if ((_values == null || _values.Length < 1) && (_instances == null || _instances.Count < 1))
                 _values = GetComponents<T>();
@@ -48,7 +48,6 @@ namespace ZG
                 if (__values == null)
                     __values = new Dictionary<string, UnityEngine.Object>();
 
-                UnityEngine.Object origin;
                 string key;
                 foreach (var value in _values)
                 {
@@ -81,7 +80,7 @@ namespace ZG
             }
         }
 
-        protected void OnDisable()
+        protected void OnDestroy()
         {
             UnityEngine.Object target;
             if (_values != null)
