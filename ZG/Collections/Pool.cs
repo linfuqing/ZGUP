@@ -11,7 +11,7 @@ namespace ZG
     /// <typeparam name="T">
     /// The type of elements in the pool.
     /// </typeparam>
-    public interface IPool<T> : IList<T>, IEnumerable<KeyValuePair<int, T>>
+    public interface IPool<T> : IList<T>, IReadOnlyList<T>, IEnumerable<KeyValuePair<int, T>>
     {
         /// <summary>
         /// Get next index of the element be added.
