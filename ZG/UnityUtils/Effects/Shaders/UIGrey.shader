@@ -97,9 +97,10 @@ Shader "ZG/UI/Grey"
 
 			fixed4 frag(v2f IN) : SV_Target
 			{
-				half4 color = (tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd) * IN.color;
+				half4 color = (tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd);
 				color.rgb = (color.r + color.g + color.b) / 3.0f;
 				color.a *= UnityGet2DClipping(IN.worldPosition.xy, _ClipRect);
+				color *= IN.color;
 
 #ifdef UNITY_UI_ALPHACLIP
 				clip(color.a - 0.001);
