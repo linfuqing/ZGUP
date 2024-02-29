@@ -258,7 +258,14 @@ namespace ZG
 
         public readonly AssetBundleLoader Loader;
 
-        public T value => values[0];
+        public T value
+        {
+            get
+            {
+                var values = this.values;
+                return values == null || values.Length < 1 ? null : values[0];
+            }
+        }
 
         public T[] values
         {
