@@ -1479,6 +1479,31 @@ namespace ZG
             return new Bounds(worldPosition, worldSize);
         }
 
+        [MenuItem("GameObject/ZG/Mesh/Check", false, 10)]
+        public static void Check(MenuCommand menuCommand)
+        {
+            GameObject gameObject = menuCommand == null ? null : menuCommand.context as GameObject;
+            if (gameObject == null)
+                return;
+
+            var meshFilters = gameObject.GetComponentsInChildren<MeshFilter>();
+            foreach (var meshFilter in meshFilters)
+            {
+                var mesh = meshFilter.sharedMesh;
+                var triangles = mesh.triangles;
+                var vertexCount = mesh.vertexCount;
+                foreach (var triangle in triangles)
+                {
+                    if(triangle < 0 || triangle >= vertexCount)
+                    {
+                        Debug.LogError($"Error Index Of {triangle}!", meshFilter);
+
+                        return;
+                    }
+                }
+            }
+        }
+
         [MenuItem("GameObject/ZG/Mesh/Save", false, 10)]
         public static void Save(MenuCommand menuCommand)
         {
