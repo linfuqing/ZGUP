@@ -683,6 +683,9 @@ namespace ZG
             Action<float> onProgress,
             Action<AssetBundle, T[]> onComplete) where T : UnityEngine.Object
         {
+            if (string.IsNullOrEmpty(assetName))
+                yield break;
+            
             var assetBundleLoader = GetOrCreateAssetBundleLoader(fileName);
             if (assetBundleLoader == null)
             {

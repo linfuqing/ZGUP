@@ -64,6 +64,18 @@ namespace ZG.Mathematics
             return Approximately(x.rot, y.rot) && Approximately(x.pos, y.pos);
         }
 
+        public static void Decompose(
+            this in float3x3 matrix, 
+            out quaternion rotation,
+            out float3 scale)
+        {
+            var value = math.float3x3(matrix);
+            rotation = math.quaternion(value);
+            var scaleMatrix = math.mul(math.float3x3(math.inverse(rotation)), value);
+
+            scale = math.float3(scaleMatrix.c0.x, scaleMatrix.c1.y, scaleMatrix.c2.z);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float Round(float value, int decimals)
         {

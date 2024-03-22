@@ -71,6 +71,15 @@ namespace ZG.Mathematics
             max = center + extents;
             this.rotation = rotation;
         }
+        
+        public Box(in float3 center, in float3 extents, in float4x4 matrix)
+        {
+            Math.Decompose(math.float3x3(matrix), out rotation, out var scale);
+            
+            var worldCenter = math.transform(matrix, center);
+            min = worldCenter - extents * scale;
+            max = worldCenter + extents * scale;
+        }
 
         public Box(float width, float height, float length, float3 start, float3 end)
         {
