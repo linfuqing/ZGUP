@@ -10,7 +10,7 @@ namespace ZG
         public int index;
         public int version;
 
-        public readonly static CallbackHandle Null = new CallbackHandle { index = -1, version = -1 };
+        public static readonly CallbackHandle Null = new CallbackHandle { index = -1, version = -1 };
 
         public bool Equals(CallbackHandle other)
         {
@@ -24,7 +24,7 @@ namespace ZG
 
         public override string ToString()
         {
-            return "(index: " + index + ", version: " + version + ')';
+            return "CallbackHandle(index: " + index + ", version: " + version + ')';
         }
     }
 
@@ -33,7 +33,7 @@ namespace ZG
     {
         public CallbackHandle value;
 
-        public readonly static CallbackHandle<T> Null = new CallbackHandle<T> { value = CallbackHandle.Null };
+        public static readonly CallbackHandle<T> Null = new CallbackHandle<T> { value = CallbackHandle.Null };
 
         public bool Equals(CallbackHandle<T> other)
         {
@@ -43,6 +43,11 @@ namespace ZG
         public override int GetHashCode()
         {
             return value.GetHashCode();
+        }
+
+        public override string ToString()
+        {
+            return value.ToString();
         }
     }
 
@@ -54,7 +59,7 @@ namespace ZG
             public T value;
         }
 
-        private readonly static Pool<Handler> Handlers = new Pool<Handler>();
+        private static readonly Pool<Handler> Handlers = new Pool<Handler>();
 
         public static bool IsVail(in CallbackHandle handle)
         {

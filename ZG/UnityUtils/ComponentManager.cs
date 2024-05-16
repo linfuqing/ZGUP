@@ -38,7 +38,7 @@ namespace ZG
             return __values != null && __values.TryGetValue(key, out var value) ? __As(key, value) : default;
         }
 
-        protected void Start()
+        protected void OnEnable()
         {
             if ((_values == null || _values.Length < 1) && (_instances == null || _instances.Count < 1))
                 _values = GetComponents<T>();
@@ -80,7 +80,7 @@ namespace ZG
             }
         }
 
-        protected void OnDestroy()
+        protected void OnDisable()
         {
             UnityEngine.Object target;
             if (_values != null)

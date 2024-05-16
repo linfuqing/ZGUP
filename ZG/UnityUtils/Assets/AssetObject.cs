@@ -9,6 +9,7 @@ namespace ZG
 
         private void OnDestroy()
         {
+            //UnityEngine.Debug.LogError($"Dispose {name}");
             _loader.Dispose();
         }
     }
@@ -48,6 +49,7 @@ namespace ZG
                         gameObject = space == Space.World ? Instantiate(gameObject, transform.position, transform.rotation) : Instantiate(gameObject, transform);
 
                         var target = gameObject.AddComponent<AssetObject>();
+                        target.name = name;
                         target._loader = __loader;
 
                         __target = gameObject;
@@ -78,6 +80,8 @@ namespace ZG
                     Destroy(target, time);
 
                     __target = null;
+
+                    __loader = default;
                 }
             }
             else if(__target != null)
@@ -85,8 +89,11 @@ namespace ZG
                 Destroy(__target);
 
                 __target = null;
+
+                __loader = default;
             }
 
+            //UnityEngine.Debug.LogError($"Dispose {fileName} : {name}");
             __loader.Dispose();
 
             /*var assetManager = this.assetManager;

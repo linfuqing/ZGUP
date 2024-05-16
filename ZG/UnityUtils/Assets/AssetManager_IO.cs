@@ -185,7 +185,7 @@ namespace ZG
 
                 if (AssetManager.__assets.TryGetValue(name, out asset))
                 {
-                    //长度不一致，不能这么写入
+                    //闀垮害涓嶄竴鑷达紝涓嶈兘杩欎箞鍐欏叆
                     /*if (asset.offset < 0L)
                         return false;
 
@@ -442,15 +442,36 @@ namespace ZG
             }
         }
 
-        public void Write(string name, byte[] bytes)
+        public bool Write(string name, byte[] bytes)
         {
+            if (__assets == null || !__assets.Remove(name, out var asset))
+                return false;
+            
+            var folder = Path.GetDirectoryName(name);
+            using (var writer = new Writer(folder, this))
+                writer.Save();
+
             File.WriteAllBytes(__GetAssetPath(name), bytes);
+            
+            asset.data.type = AssetType.UncompressedRuntime;
+            asset.data.pack = AssetPack.Default;
+            using (var writer = new Writer(folder, this))
+                writer.Write(name, asset.data);
+
+            return true;
         }
 
-        public void Write(string name, Stream stream, int bufferSize = 1024)
+        public bool Write(string name, Stream stream, int bufferSize = 1024)
         {
             using (var fileStream = File.OpenWrite(__GetAssetPath(name)))
             {
+                if (__assets == null || !__assets.Remove(name, out var asset))
+                    return false;
+
+                var folder = Path.GetDirectoryName(name);
+                using (var writer = new Writer(folder, this))
+                    writer.Save();
+
                 int bytesToRead;
                 var buffer = new byte[bufferSize];
                 do
@@ -461,78 +482,22 @@ namespace ZG
                 } while (bytesToRead > 0);
 
                 //stream.CopyTo(fileStream);
+
+                asset.data.type = AssetType.UncompressedRuntime;
+                asset.data.pack = AssetPack.Default;
+                using (var writer = new Writer(folder, this))
+                    writer.Write(name, asset.data);
+
+                return true;
             }
         }
 
-        /*private long __Create(string name, in AssetData data)
-        {
-            Asset asset;
-
-            if (__assets == null)
-                __assets = new Dictionary<string, Asset>();
-
-            bool isContains = __assets.Remove(name);
-            string folder = Path.GetDirectoryName(name);
-            if (string.IsNullOrEmpty(folder))
-            {
-                int assetCount = CountOf(folder);
-                if (assetCount > 0 && version != VERSION || isContains)
-                    SaveFolder();
-
-                CreateDirectory(__path);
-
-                using (var fileStream = File.Open(__path, FileMode.OpenOrCreate, FileAccess.Write))
-                {
-                    using (var writer = new BinaryWriter(fileStream))
-                    {
-                        writer.Write(VERSION);
-                        writer.Write(assetCount + 1);
-
-                        fileStream.Position = fileStream.Length;
-
-                        writer.Write(Path.GetFileName(name));
-
-                        asset.offset = fileStream.Position;
-
-                        data.Write(writer);
-                    }
-                }
-            }
-            else
-            {
-                var assetManager = new AssetManager(__GetManagerPath(folder));
-
-                asset.offset = assetManager.__Create(Path.GetFileName(name), data);
-            }
-
-            asset.data = data;
-
-            __assets[name] = asset;
-
-            return asset.offset;
-        }*/
-
-        /*private static void __Save(BinaryWriter writer, AssetData data)
-        {
-            writer.Write((byte)data.type);
-
-            data.info.Write(writer);
-
-            writer.Write(data.fileOffset);
-            writer.Write(string.IsNullOrEmpty(data.filePath) ? string.Empty : data.filePath);
-
-            int numDependencies = data.dependencies == null ? 0 : data.dependencies.Length;
-            writer.Write(numDependencies);
-            for (int i = 0; i < numDependencies; ++i)
-                writer.Write(data.dependencies[i]);
-        }*/
-
-        public bool __Delete(string name)
+        private bool __Delete(string name)
         {
             if (__assets == null)
                 return false;
 
-            if (__assets.TryGetValue(name, out var asset) && __assets.Remove(name))
+            if (__assets.Remove(name, out var asset))
             {
                 /*var assetManager = new AssetManager(__GetManagerPath(folder));
 
