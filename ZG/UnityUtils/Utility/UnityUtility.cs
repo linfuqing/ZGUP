@@ -40,6 +40,12 @@ namespace ZG
     }
 
     [System.Serializable]
+    public class PointerEvent : UnityEngine.Events.UnityEvent<Vector2>
+    {
+
+    }
+
+    [System.Serializable]
     public class IntEvent : UnityEngine.Events.UnityEvent<int>
     {
 

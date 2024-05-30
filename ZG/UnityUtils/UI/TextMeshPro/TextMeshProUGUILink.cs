@@ -9,13 +9,9 @@ namespace ZG
     [RequireComponent(typeof(TextMeshProUGUI))]
     public class TextMeshProUGUILink : MonoBehaviour, IPointerClickHandler
     {
-        [Serializable]
-        public class IDEvent : UnityEvent<string>
-        {
-
-        }
-
-        public IDEvent onClick;
+        public event Action<string, PointerEventData> clickEvent;
+        
+        public StringEvent onClick;
         private TextMeshProUGUI __text;
 
         public void SetText(string text)
@@ -45,8 +41,12 @@ namespace ZG
             // was a link clicked?
             TMP_LinkInfo linkInfo = __text.textInfo.linkInfo[linkIndex];
 
+            var id = linkInfo.GetLinkID();
             // open the link id as a url, which is the metadata we added in the text field
-            onClick.Invoke(linkInfo.GetLinkID());
+            onClick.Invoke(id);
+
+            if (clickEvent != null)
+                clickEvent(id, eventData);
         }
     }
 }
