@@ -44,6 +44,19 @@ namespace ZG
             }
         }*/
 
+        public static int MakePointerIdForTouch(int deviceID, int touchID)
+        {
+            unchecked
+            {
+                return (deviceID << 24) + touchID;
+            }
+        }
+
+        public static bool IsHit(int deviceID, int touchID)
+        {
+            return IsHit((deviceID << 24) + touchID);
+        }
+        
         public static bool IsHit(int pointerId)
         {
             if (__instances == null)
@@ -58,7 +71,7 @@ namespace ZG
 
             return false;
         }
-
+        
         /*public static void AddForeground(Transform transform, int sortingOrder = 0, int depth = 0)
         {
             ForegroundGraphics foregroundGraphics;
