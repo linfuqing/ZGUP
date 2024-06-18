@@ -7,8 +7,10 @@ using UnityEngine.EventSystems;
 namespace ZG
 {
     [RequireComponent(typeof(TextMeshProUGUI))]
-    public class TextMeshProUGUILink : MonoBehaviour, IPointerClickHandler
+    public class TextMeshProUGUILink : MonoBehaviour, IPointerClickHandler, IDeselectHandler
     {
+        public event Action deselectEvent;
+
         public event Action<string, PointerEventData> clickEvent;
         
         public StringEvent onClick;
@@ -27,6 +29,8 @@ namespace ZG
 
         void IPointerClickHandler.OnPointerClick(PointerEventData eventData)
         {
+            EventSystem.current.SetSelectedGameObject(gameObject);
+            
             if (onClick == null)
                 return;
 
@@ -43,6 +47,12 @@ namespace ZG
 
             if (clickEvent != null)
                 clickEvent(id, eventData);
+        }
+
+        void IDeselectHandler.OnDeselect(BaseEventData baseEventData)
+        {
+            if (deselectEvent != null)
+                deselectEvent();
         }
     }
 }
