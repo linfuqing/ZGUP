@@ -49,6 +49,9 @@ namespace ZG
                 var graphic = this.graphic;
                 var canvas = graphic == null ? null : graphic.canvas;
                 if (canvas == null)
+                    canvas = GetComponentInParent<Canvas>();
+                
+                if (canvas == null)
                     return;
 
                 var renderMode = canvas.renderMode;
@@ -76,12 +79,12 @@ namespace ZG
                     ((RectTransform)transform).anchoredPosition = localPosition;
                 }
 
-                var rectTransform = this.graphic.rectTransform;
+                var rectTransform = graphic == null ? transform as RectTransform : graphic.rectTransform;
                 rectTransform.GetWorldCorners(__corners);
                 Vector2 min = new Vector2(float.MaxValue, float.MaxValue), max = new Vector2(float.MinValue, float.MinValue), point;
                 for (int i = 0; i < 4; ++i)
                 {
-                    point = camera == null ? (Vector2)__corners[i] : RectTransformUtility.WorldToScreenPoint(camera, __corners[i]);
+                    point = camera == null ? __corners[i] : RectTransformUtility.WorldToScreenPoint(camera, __corners[i]);
                     if(RectTransformUtility.ScreenPointToLocalPointInRectangle(this.viewport, point, camera, out point))
                     {
                         min = Vector2.Min(min, point);
@@ -160,12 +163,12 @@ namespace ZG
             }
         }
 
-#if UNITY_EDITOR
+/*#if UNITY_EDITOR
         void Update()
         {
             position = transform.position;
         }
-#endif
+#endif*/
 
         void OnDisable()
         {

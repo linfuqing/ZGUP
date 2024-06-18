@@ -12,21 +12,17 @@ namespace ZG
         public event Action<string, PointerEventData> clickEvent;
         
         public StringEvent onClick;
-        private TextMeshProUGUI __text;
 
-        public void SetText(string text)
+        public TextMeshProUGUI text
         {
-            __text.SetText(text);
-        }
+            get;
 
-        public void SetText(System.Text.StringBuilder text)
-        {
-            __text.SetText(text);
+            private set;
         }
-
+        
         protected void Awake()
         {
-            __text = GetComponent<TextMeshProUGUI>();
+            text = GetComponent<TextMeshProUGUI>();
         }
 
         void IPointerClickHandler.OnPointerClick(PointerEventData eventData)
@@ -34,12 +30,12 @@ namespace ZG
             if (onClick == null)
                 return;
 
-            int linkIndex = TMP_TextUtilities.FindIntersectingLink(__text, eventData.position, eventData.enterEventCamera);
+            int linkIndex = TMP_TextUtilities.FindIntersectingLink(text, eventData.position, eventData.enterEventCamera);
             if (linkIndex == -1)
                 return;
 
             // was a link clicked?
-            TMP_LinkInfo linkInfo = __text.textInfo.linkInfo[linkIndex];
+            TMP_LinkInfo linkInfo = text.textInfo.linkInfo[linkIndex];
 
             var id = linkInfo.GetLinkID();
             // open the link id as a url, which is the metadata we added in the text field
