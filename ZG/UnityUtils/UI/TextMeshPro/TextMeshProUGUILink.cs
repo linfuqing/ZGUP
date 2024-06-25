@@ -12,21 +12,23 @@ namespace ZG
         public event Action deselectEvent;
 
         public event Action<string, PointerEventData> clickEvent;
+
+        private TextMeshProUGUI __text;
         
         public StringEvent onClick;
 
         public TextMeshProUGUI text
         {
-            get;
+            get
+            {
+                if(__text == null)
+                    __text = GetComponent<TextMeshProUGUI>();
 
-            private set;
+                return __text;
+            }
+            
         }
         
-        protected void Awake()
-        {
-            text = GetComponent<TextMeshProUGUI>();
-        }
-
         void IPointerClickHandler.OnPointerClick(PointerEventData eventData)
         {
             EventSystem.current.SetSelectedGameObject(gameObject);
