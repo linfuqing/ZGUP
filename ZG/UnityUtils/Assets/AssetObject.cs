@@ -40,7 +40,7 @@ namespace ZG
         {
             get
             {
-                if (__target == null)
+                if (__target == null && this != null)
                 {
                     var gameObject = __loader.value;
                     if (gameObject != null)
