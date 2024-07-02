@@ -52,6 +52,31 @@ namespace ZG
             }
         }
 
+        public static bool IsHit(int pointerID, int displayIndex, in Vector2 screenPosition, GameObject gameObject =null)
+        {
+            var eventSystem = EventSystem.current;
+            var pointerEventData = new PointerEventData(eventSystem);
+            pointerEventData.displayIndex = displayIndex;
+            pointerEventData.pointerId = pointerID;
+            pointerEventData.position = screenPosition;
+
+            var raycastResults = new List<RaycastResult>();
+            eventSystem.RaycastAll(pointerEventData, raycastResults);
+            if (raycastResults.Count > 0)
+            {
+                foreach (var result in raycastResults)
+                {
+                    if (result.gameObject != gameObject ||
+                        !(result.gameObject.transform is RectTransform))
+                        continue;
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public static bool IsHit(int deviceID, int touchID)
         {
             return IsHit((deviceID << 24) + touchID);
