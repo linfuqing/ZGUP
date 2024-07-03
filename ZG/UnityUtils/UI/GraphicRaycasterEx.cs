@@ -52,11 +52,10 @@ namespace ZG
             }
         }
 
-        public static bool IsHit(int pointerID, int displayIndex, in Vector2 screenPosition, GameObject gameObject =null)
+        public static bool IsHit(int pointerID, in Vector2 screenPosition, GameObject gameObject =null)
         {
             var eventSystem = EventSystem.current;
             var pointerEventData = new PointerEventData(eventSystem);
-            pointerEventData.displayIndex = displayIndex;
             pointerEventData.pointerId = pointerID;
             pointerEventData.position = screenPosition;
 
@@ -66,7 +65,7 @@ namespace ZG
             {
                 foreach (var result in raycastResults)
                 {
-                    if (result.gameObject != gameObject ||
+                    if (result.gameObject == gameObject ||
                         !(result.gameObject.transform is RectTransform))
                         continue;
 
