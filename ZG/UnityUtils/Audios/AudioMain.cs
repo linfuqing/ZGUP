@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace ZG
 {
-    public class AudioMain : MonoBehaviour
+    public class AudioMain : MonoBehaviour, IAudioMain
     {
-        public event System.Action<AudioSource> onInit;
+        public System.Action<AudioSource> onInit;
 
         [Tooltip("如果当前没有空闲组件则忽略播放。")]
         public bool isFixed;
@@ -14,25 +15,8 @@ namespace ZG
         internal AudioSource[] _styles = null;
         private Dictionary<int, List<AudioSource>> __audioSources;
 
-        public bool Play(bool isForce, int styleIndex, int itemIndex, AudioDatabase database, System.Action<AudioSource, AudioClip> action)
+        public bool Play(bool isForce, int styleIndex, float volumeScale, double time, AudioClip clip)
         {
-            AudioDatabase.Item item = database.items[itemIndex];
-
-            int level = this.level < 0 ?
-                Random.Range(0, item.clips.Length) :
-#if DEBUG
-                this.level;
-#else
-                Mathf.Min(this.level, item.clips.Length);
-#endif
-
-#if DEBUG
-            if (item.clips == null || item.clips.Length <= level)
-                Debug.LogError($"{name} Missing Clip Level {level}", this);
-#endif
-
-            AudioClip clip = item.clips[level];
-
             AudioSource style = _styles[styleIndex];
             List<AudioSource> audioSources;
 
@@ -106,29 +90,63 @@ namespace ZG
                 return false;
 
             audioSource.loop = false;
-            action(audioSource, clip);
+
+            if (time > double.Epsilon)
+            {
+                audioSource.clip = clip;
+
+                audioSource.PlayScheduled(time);
+            }
+            else
+                audioSource.PlayOneShot(clip, volumeScale);
 
             return true;
         }
 
+        public bool Play(bool isForce, int styleIndex, int itemIndex, float volumeScale, double time, AudioDatabase database)
+        {
+            if(database == null)
+                Debug.LogError("Error Database", this);
+            
+            ref var item = ref database.items[itemIndex];
+
+            int level = this.level < 0 ?
+                Random.Range(0, item.clips.Length) :
+#if DEBUG
+                this.level;
+#else
+                Mathf.Min(this.level, item.clips.Length);
+#endif
+
+#if DEBUG
+            if (item.clips == null || item.clips.Length <= level)
+                Debug.LogError($"{name} Missing Clip Level {level}", this);
+#endif
+
+            var wrapperType = System.Type.GetType(item.wrapperType);
+            if(wrapperType == null)
+                return Play(isForce, styleIndex, volumeScale, time, item.clips[level]);
+
+            var wrapper = System.Activator.CreateInstance(wrapperType) as IAudioWrapper;
+            if(wrapper == null)
+                return Play(isForce, styleIndex, volumeScale, time, item.clips[level]);
+            
+            return wrapper.Play(isForce, styleIndex, volumeScale, time, item.clips[level], this);
+        }
+
         public bool Play(bool isForce, int styleIndex, int itemIndex, double time, AudioDatabase database)
         {
-            return Play(isForce, styleIndex, itemIndex, database, (x, y) =>
-            {
-                x.clip = y;
-
-                x.PlayScheduled(time);
-            });
+            return Play(isForce, styleIndex, itemIndex, 1.0f, time, database);
         }
 
         public bool Play(bool isForce, int styleIndex, int itemIndex, float volumeScale, AudioDatabase database)
         {
-            return Play(isForce, styleIndex, itemIndex, database, (x, y) => x.PlayOneShot(y, volumeScale));
+            return Play(isForce, styleIndex, itemIndex, volumeScale, 0.0, database);
         }
 
         public bool Play(bool isForce, int styleIndex, int itemIndex, AudioDatabase database)
         {
-            return Play(isForce, styleIndex, itemIndex, database, (x, y) => x.PlayOneShot(y));
+            return Play(isForce, styleIndex, itemIndex, 1.0f, 0.0, database);
         }
     }
 }

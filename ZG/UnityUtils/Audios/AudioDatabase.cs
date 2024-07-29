@@ -1,18 +1,41 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "ZG/Audio Database")]
-public class AudioDatabase : ScriptableObject
+namespace ZG
 {
-    [Serializable]
-    public struct Item
+    public interface IAudioMain
     {
-#if UNITY_EDITOR
-        public string name;
-#endif
-
-        public AudioClip[] clips;
+        bool Play(bool isForce, int styleIndex, float volumeScale, double time, AudioClip clip);
+    }
+    
+    public interface IAudioWrapper
+    {
+        bool Play(
+            bool isForce, 
+            int styleIndex, 
+            float volumeScale, 
+            double time, 
+            AudioClip clip, 
+            IAudioMain main);
     }
 
-    public Item[] items;
+    [CreateAssetMenu(menuName = "ZG/Audio Database")]
+    public class AudioDatabase : ScriptableObject
+    {
+        [Serializable]
+        public struct Item
+        {
+#if UNITY_EDITOR
+            public string name;
+#endif
+
+            [Type(typeof(IAudioWrapper))]
+            public string wrapperType;
+
+            public AudioClip[] clips;
+        }
+
+        public Item[] items;
+    }
 }
