@@ -287,7 +287,7 @@ namespace ZG
             return null;
         }
 
-        public static string MakeUnique(this string name, IEnumerable<string> names)
+        public static string MakeUnique(this string name, IEnumerable names)
         {
             if (name == null)
                 name = string.Empty;
@@ -295,9 +295,9 @@ namespace ZG
             if (names != null)
             {
                 string newName;
-                foreach (string temp in names)
+                foreach (var temp in names)
                 {
-                    if (temp == name)
+                    if (GetName(temp) == name)
                     {
                         newName = Regex.Replace(
                             name,
@@ -309,14 +309,21 @@ namespace ZG
                         else
                             name = newName;
 
-                        return name.MakeUnique(names);
+                        return MakeUnique(name, names);
                     }
                 }
             }
 
             return name;
         }
-        
+
+        public static string MakeUnique<T>(this T target, IEnumerable<T> names)
+        {
+            string name = GetName(target);
+
+            return MakeUnique(name, names);
+        }
+
         public static int IndexOf(this IEnumerable enumerable, string name)
         {
             if (enumerable == null)
