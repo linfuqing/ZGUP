@@ -927,8 +927,8 @@ namespace ZG
                     destination = asset.Value.data;
                     if (__assets == null || 
                         (__assets.TryGetValue(assetName, out source) ? 
-                        (source.data.isReadOnly && (pack == null ? confirm == null : !pack.Contains(source.data.pack.name)) ? source.data.info.version - 1 : source.data.info.version) : //Ϊ���÷����İ����滻
-                        (versions != null && versions.TryGetValue(folder, out version) ? version - 1 : 0)) < 
+                        (source.data.isReadOnly && (pack == null ? confirm == null : !pack.Contains(source.data.pack.name)) ? Math.Max(source.data.info.version, 1) - 1 : source.data.info.version) : //Ϊ���÷����İ����滻
+                        (versions != null && versions.TryGetValue(folder, out version) ? Math.Max(version, 1) - 1 : 0)) < 
                         destination.info.version)
                     {
 #if DEBUG
