@@ -1613,6 +1613,18 @@ namespace ZG
                 }
             }
 
+            string assetName, fileName;
+            var assetNames = new Dictionary<string, string>();
+            foreach (var assetInfo in assetInfos)
+            {
+                assetName = assetInfo.Key;
+                fileName = assetInfo.Value.fileName;
+                fileName = string.IsNullOrEmpty(fileName) ? assetName : fileName;
+                assetNames[fileName] = assetName;
+            }
+
+            int i, numDependencies;
+            
             Asset asset;
             asset.offset = -1L;
             asset.data.pack = AssetPack.Default;
@@ -1620,7 +1632,7 @@ namespace ZG
             {
                 foreach (string assetBundleName in assetBundleNames)
                 {
-                    if (/*assetInfos == null || */!assetInfos.TryGetValue(assetBundleName, out asset.data.info))
+                    if (!assetNames.TryGetValue(assetBundleName, out assetName) || !assetInfos.TryGetValue(assetName, out asset.data.info))
                     {
                         /*asset.info.version = 0;
                         asset.info.size = 0;
@@ -1631,52 +1643,49 @@ namespace ZG
                         continue;
                     }
 
-                    if (assetTypes == null || !assetTypes.TryGetValue(assetBundleName, out asset.data.type))
+                    if (assetTypes == null || !assetTypes.TryGetValue(assetName, out asset.data.type))
                         asset.data.type = AssetType.Uncompressed;
                     else
-                        assetTypes.Remove(assetBundleName);
+                        assetTypes.Remove(assetName);
 
                     //asset.data.pack = AssetPack.Default;
                     asset.data.dependencies = assetBundleManifest.GetDirectDependencies(assetBundleName);
+                    numDependencies = asset.data.dependencies == null ? 0 : asset.data.dependencies.Length;
+                    for(i = 0; i < numDependencies; ++i)
+                    {
+                        asset.data.dependencies[i] = assetNames.TryGetValue(asset.data.dependencies[i], out fileName)
+                            ? fileName
+                            : null;
+                    }
 
-                    assets.Add(assetBundleName, asset);
+                    assets.Add(assetName, asset);
                 }
             }
             else
             {
                 folder = FilterFolderName(folder) + '/';
 
-                int i, numDependencies;
-                string dependency;
                 foreach (string assetBundleName in assetBundleNames)
                 {
-                    if (/*assetInfos == null || */!assetInfos.TryGetValue(assetBundleName, out asset.data.info))
+                    if (!assetNames.TryGetValue(assetBundleName, out assetName) || !assetInfos.TryGetValue(assetName, out asset.data.info))
                     {
-                        /*asset.info.version = 0;
-                        asset.info.size = 0;
-                        asset.info.md5 = new byte[16];*/
-
                         Debug.LogError($"Missing Asset Bundle {assetBundleName}");
 
                         continue;
                     }
 
-                    if (assetTypes == null || !assetTypes.TryGetValue(assetBundleName, out asset.data.type))
+                    if (assetTypes == null || !assetTypes.TryGetValue(assetName, out asset.data.type))
                         asset.data.type = AssetType.Uncompressed;
                     else
-                        assetTypes.Remove(assetBundleName);
+                        assetTypes.Remove(assetName);
 
                     //asset.data.pack = AssetPack.Default;
                     asset.data.dependencies = assetBundleManifest.GetDirectDependencies(assetBundleName);
                     numDependencies = asset.data.dependencies == null ? 0 : asset.data.dependencies.Length;
                     for (i = 0; i < numDependencies; ++i)
-                    {
-                        dependency = asset.data.dependencies[i];
-                        if (!string.IsNullOrEmpty(dependency))
-                            asset.data.dependencies[i] = folder + dependency;
-                    }
+                        asset.data.dependencies[i] = assetNames.TryGetValue(asset.data.dependencies[i], out fileName) ? folder + fileName : null;
 
-                    assets.Add(folder + assetBundleName, asset);
+                    assets.Add(folder + assetName, asset);
                 }
             }
 
@@ -1684,7 +1693,6 @@ namespace ZG
             {
                 asset.data.dependencies = null;
 
-                string assetName;
                 foreach (var pair in assetTypes)
                 {
                     assetName = pair.Key;
