@@ -1251,9 +1251,9 @@ namespace ZG
                                 assetName = asset.Key;
                                 destination = asset.Value.data;
 
-                                fullURL = url + assetName;
+                                fullURL = url + (string.IsNullOrEmpty(destination.info.fileName) ? assetName : destination.info.fileName);
 
-                                filePath = __GetAssetPath(string.IsNullOrEmpty(destination.info.fileName) ? assetName : destination.info.fileName);
+                                filePath = __GetAssetPath(assetName);
                                 CreateDirectory(filePath);
 
                                 using (var downloadHandlerFile = new DownloadHandlerFile(filePath))
@@ -1312,6 +1312,8 @@ namespace ZG
 
                                         md5hash = md5.ComputeHash(File.OpenRead(filePath));
 
+                                        destination.info.fileName = string.Empty;
+                                        
                                         if (destination.info.md5 == null)
                                             destination.info.md5 = md5hash;
                                         else if (!MemoryEquals(md5hash, destination.info.md5))

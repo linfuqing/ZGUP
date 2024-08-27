@@ -673,7 +673,7 @@ namespace ZG
             else
             {
                 fileOffset = 0;
-                filePath = __GetAssetPath(name);
+                filePath = __GetAssetPath(string.IsNullOrEmpty(asset.data.info.fileName) ? asset.data.info.fileName : name);
             }
 
             return true;
