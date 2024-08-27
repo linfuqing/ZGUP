@@ -10,7 +10,8 @@ namespace ZG
     {
         //public const string ROOT_GUID_KEY = "AvatarRootGUID";
         //public const string ROOT_PATH_KEY = "AvatarRootPath";
-        public const string BUILD_ASSET_BUNDLE_KEY = "ZGBuildAssetBundle";
+        //public const string BUILD_ASSET_BUNDLE_KEY = "ZGBuildAssetBundle";
+        
         public const string BUILD_ASSET_BUNDLE_OPTIONS = "ZGBuildAssetBundleOptions";
         public const string BUILD_TARGET = "ZGBuildTarget";
         public const string ASSET_CONFIG_PATH = "ZGAssetConfigPath";
@@ -21,7 +22,14 @@ namespace ZG
 
         //private bool __isBuildAssetBundle;
         private BuildAssetBundleOptions __buildAssetBundleOptions;
+        private BuildOptions __buildOptions;
         private BuildTarget __buildTarget;
+
+        public static bool isAppendHashToName =>
+            (buildAssetBundleOptions & BuildAssetBundleOptions.AppendHashToAssetBundleName) ==
+            BuildAssetBundleOptions.AppendHashToAssetBundleName;
+
+        public static BuildAssetBundleOptions buildAssetBundleOptions => (BuildAssetBundleOptions)EditorPrefs.GetInt(BUILD_ASSET_BUNDLE_OPTIONS);
 
         public static uint version
         {
@@ -35,7 +43,7 @@ namespace ZG
                 EditorPrefs.SetInt(VERSION, (int)value);
             }
         }
-
+        
         public static AssetConfig assetConfig
         {
             get
@@ -90,7 +98,7 @@ namespace ZG
             AssetManager assetManager = new AssetManager(Path.Combine(directoryName, Path.GetFileName(directoryName)));
 
             uint version = AssetEditor.version;
-            assetManager.Update(Path.GetFileName(path), ref version);
+            assetManager.Update(isAppendHashToName, Path.GetFileName(path), ref version);
             AssetEditor.version = version;
 
             EditorUtility.RevealInFinder(path);
@@ -123,7 +131,7 @@ namespace ZG
             AssetManager assetManager = new AssetManager(Path.Combine(directoryName, Path.GetFileName(directoryName)));
             
             uint version = AssetEditor.version;
-            assetManager.Update(Path.GetFileName(path), ref version);
+            assetManager.Update(isAppendHashToName, Path.GetFileName(path), ref version);
             AssetEditor.version = version;
 
             EditorUtility.RevealInFinder(path);
@@ -147,6 +155,7 @@ namespace ZG
 
             AssetManager assetManager = new AssetManager(Path.Combine(path, Path.GetFileName(path)));
 
+            bool isAppendHashToName = AssetEditor.isAppendHashToName;
             uint version = AssetEditor.version, maxVersion = version, minVersion;
             UnityEditor.Build.Reporting.BuildReport report;
             string assetPath;
@@ -174,7 +183,7 @@ namespace ZG
 
                 minVersion = version;
 
-                assetManager.Update(assetPath, ref minVersion);
+                assetManager.Update(isAppendHashToName, assetPath, ref minVersion);
 
                 maxVersion = Math.Max(maxVersion, minVersion);
             }
@@ -239,12 +248,17 @@ namespace ZG
                 }
             }
 
-            BuildAssetBundleOptions buildAssetBundleOptions = (BuildAssetBundleOptions)EditorPrefs.GetInt(BUILD_ASSET_BUNDLE_OPTIONS);
+            BuildAssetBundleOptions buildAssetBundleOptions = AssetEditor.buildAssetBundleOptions;
             BuildTarget buildTarget = (BuildTarget)Enum.Parse(typeof(BuildTarget), EditorPrefs.GetString(BUILD_TARGET));
             AssetBundleManifest destination = BuildPipeline.BuildAssetBundles(Path.GetDirectoryName(path), assetBundleBuilds.ToArray(), buildAssetBundleOptions, buildTarget);
 
             uint version = AssetEditor.version;
-            AssetManager.UpdateAfterBuild(source, destination, folder, ref version);
+            AssetManager.UpdateAfterBuild(
+                (buildAssetBundleOptions & BuildAssetBundleOptions.AppendHashToAssetBundleName) == BuildAssetBundleOptions.AppendHashToAssetBundleName, 
+                source, 
+                destination, 
+                folder, 
+                ref version);
             AssetEditor.version = version;
 
             if (sourceAssetBundle != null)
@@ -317,12 +331,17 @@ namespace ZG
             if (assetBundleBuilds == null)
                 return;
 
-            BuildAssetBundleOptions buildAssetBundleOptions = (BuildAssetBundleOptions)EditorPrefs.GetInt(BUILD_ASSET_BUNDLE_OPTIONS);
+            BuildAssetBundleOptions buildAssetBundleOptions = AssetEditor.buildAssetBundleOptions;
             BuildTarget buildTarget = (BuildTarget)Enum.Parse(typeof(BuildTarget), EditorPrefs.GetString(BUILD_TARGET));
             AssetBundleManifest destination = BuildPipeline.BuildAssetBundles(path, assetBundleBuilds.ToArray(), buildAssetBundleOptions, buildTarget);
             
             uint version = AssetEditor.version;
-            AssetManager.UpdateAfterBuild(source, destination, path, ref version);
+            AssetManager.UpdateAfterBuild(
+                (buildAssetBundleOptions & BuildAssetBundleOptions.AppendHashToAssetBundleName) == BuildAssetBundleOptions.AppendHashToAssetBundleName, 
+                source, 
+                destination, 
+                path, 
+                ref version);
             AssetEditor.version = version;
 
             if (sourceAssetBundle != null)
@@ -444,11 +463,16 @@ namespace ZG
                 //AssetDatabase.SaveAssets();
                 //AssetDatabase.Refresh();
                 AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ImportRecursive);
-                var buildAssetBundleOptions = (BuildAssetBundleOptions)EditorPrefs.GetInt(BUILD_ASSET_BUNDLE_OPTIONS);
+                var buildAssetBundleOptions = AssetEditor.buildAssetBundleOptions;
                 var destination = BuildPipeline.BuildAssetBundles(assetFolder, assetBundleBuilds.ToArray(), buildAssetBundleOptions, buildTarget);
 
                 uint version = AssetEditor.version;
-                AssetManager.UpdateAfterBuild(source, destination, assetFolder, ref version);
+                AssetManager.UpdateAfterBuild(
+                    (buildAssetBundleOptions & BuildAssetBundleOptions.AppendHashToAssetBundleName) == BuildAssetBundleOptions.AppendHashToAssetBundleName, 
+                    source, 
+                    destination, 
+                    assetFolder, 
+                    ref version);
                 AssetEditor.version = version;
 
                 if (assetBundle != null)
@@ -470,12 +494,17 @@ namespace ZG
                 //AssetDatabase.SaveAssets();
                 //AssetDatabase.Refresh();
                 AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ImportRecursive);
-                BuildAssetBundleOptions buildAssetBundleOptions = (BuildAssetBundleOptions)EditorPrefs.GetInt(BUILD_ASSET_BUNDLE_OPTIONS);
+                BuildAssetBundleOptions buildAssetBundleOptions = AssetEditor.buildAssetBundleOptions;
                 BuildTarget buildTarget = (BuildTarget)Enum.Parse(typeof(BuildTarget), EditorPrefs.GetString(BUILD_TARGET));
                 AssetBundleManifest destination = BuildPipeline.BuildAssetBundles(assetFolder, buildAssetBundleOptions, buildTarget);
 
                 uint version = AssetEditor.version;
-                AssetManager.UpdateAfterBuild(source, destination, assetFolder, ref version);
+                AssetManager.UpdateAfterBuild(
+                    (buildAssetBundleOptions & BuildAssetBundleOptions.AppendHashToAssetBundleName) == BuildAssetBundleOptions.AppendHashToAssetBundleName, 
+                    source, 
+                    destination, 
+                    assetFolder, 
+                    ref version);
                 AssetEditor.version = version;
 
                 if (assetBundle != null)
@@ -531,7 +560,12 @@ namespace ZG
             if (assetBundle != null)
             {
                 uint version = AssetEditor.version;
-                AssetManager.UpdateAfterBuild(null, assetBundle.LoadAsset<AssetBundleManifest>("assetBundleManifest"), path, ref version);
+                AssetManager.UpdateAfterBuild(
+                    (buildAssetBundleOptions & BuildAssetBundleOptions.AppendHashToAssetBundleName) == BuildAssetBundleOptions.AppendHashToAssetBundleName, 
+                    null, 
+                    assetBundle.LoadAsset<AssetBundleManifest>("assetBundleManifest"), 
+                    path, 
+                    ref version);
                 AssetEditor.version = version;
 
                 assetBundle.Unload(true);
@@ -548,7 +582,10 @@ namespace ZG
             EditorPrefs.SetString(PATH, path);
 
             uint version = AssetEditor.version;
-            AssetManager.WriteAssetInfo(path, ref version);
+            AssetManager.WriteAssetInfo(
+                (buildAssetBundleOptions & BuildAssetBundleOptions.AppendHashToAssetBundleName) == BuildAssetBundleOptions.AppendHashToAssetBundleName, 
+                path, 
+                ref version);
             AssetEditor.version = version;
         }
 

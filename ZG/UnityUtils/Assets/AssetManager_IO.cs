@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -381,7 +382,7 @@ namespace ZG
             }
         }
 
-        public void Update(string name, ref uint minVersion)
+        public void Update(bool isAppendHashToName, string name, ref uint minVersion)
         {
             string directoryName = Path.GetDirectoryName(__path);
             if (version < 1)
@@ -430,9 +431,20 @@ namespace ZG
                 using (var md5 = new MD5CryptoServiceProvider())
                     data.info.md5 = md5.ComputeHash(File.ReadAllBytes(path));
 
+                data.info.fileName = isAppendHashToName ? $"{name}_{BitConverter.ToString(data.info.md5)}" : string.Empty;
+
                 //__Create(name, data);
                 using (var writer = new Writer(string.Empty, this))
                     writer.Write(name, data);
+
+                if (isAppendHashToName)
+                {
+                    string filePath = Path.Combine(directoryName, data.info.fileName);
+                    if(File.Exists(filePath))
+                        File.Delete(filePath);
+                    
+                    File.Move(path, filePath);
+                }
             }
             else
             {
@@ -451,7 +463,7 @@ namespace ZG
             using (var writer = new Writer(folder, this))
                 writer.Save();
 
-            File.WriteAllBytes(__GetAssetPath(name), bytes);
+            File.WriteAllBytes(__GetAssetPath(string.IsNullOrEmpty(asset.data.info.fileName) ? name : asset.data.info.fileName), bytes);
             
             asset.data.type = AssetType.UncompressedRuntime;
             asset.data.pack = AssetPack.Default;
@@ -463,11 +475,11 @@ namespace ZG
 
         public bool Write(string name, Stream stream, int bufferSize = 1024)
         {
-            using (var fileStream = File.OpenWrite(__GetAssetPath(name)))
-            {
-                if (__assets == null || !__assets.Remove(name, out var asset))
-                    return false;
+            if (__assets == null || !__assets.Remove(name, out var asset))
+                return false;
 
+            using (var fileStream = File.OpenWrite(__GetAssetPath(string.IsNullOrEmpty(asset.data.info.fileName) ? name : asset.data.info.fileName)))
+            {
                 var folder = Path.GetDirectoryName(name);
                 using (var writer = new Writer(folder, this))
                     writer.Save();
@@ -506,7 +518,7 @@ namespace ZG
                     return true;*/
 
                 if (!asset.data.isReadOnly)
-                    File.Delete(__GetAssetPath(name));
+                    File.Delete(__GetAssetPath(string.IsNullOrEmpty(asset.data.info.fileName) ? name : asset.data.info.fileName));
 
                 return true;
             }

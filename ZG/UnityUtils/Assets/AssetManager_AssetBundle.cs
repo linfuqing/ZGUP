@@ -866,7 +866,7 @@ namespace ZG
                 assetName = assetNames[i];
                 asset = __assets[assetName];
 
-                outputPath = __GetAssetPath(assetName);
+                outputPath = __GetAssetPath(string.IsNullOrEmpty(asset.data.info.fileName) ? assetName : asset.data.info.fileName);
 
                 if (asset.data.pack.isVail)
                 {

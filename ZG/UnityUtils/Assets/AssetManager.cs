@@ -93,6 +93,7 @@ namespace ZG
         {
             public uint version;
             public uint size;
+            public string fileName;
             public byte[] md5;
 
             public static AssetInfo Read(BinaryReader reader, uint version)
@@ -101,16 +102,22 @@ namespace ZG
                 assetInfo.version = reader.ReadUInt32();
                 assetInfo.size = reader.ReadUInt32();
 
-                switch (version)
+                if (version < 1)
                 {
-                    case 0:
-                        assetInfo.md5 = null;
-                        break;
-                    default:
-                        assetInfo.md5 = reader.ReadBytes(16);
-                        break;
+                    assetInfo.fileName = null;
+                    assetInfo.md5 = null;
                 }
-
+                else if (version < 9)
+                {
+                    assetInfo.fileName = null;
+                    assetInfo.md5 = reader.ReadBytes(16);
+                }
+                else
+                {
+                    assetInfo.fileName = reader.ReadString();
+                    assetInfo.md5 = reader.ReadBytes(16);
+                }
+                
                 return assetInfo;
             }
 
@@ -119,6 +126,7 @@ namespace ZG
                 writer.Write(version);
                 writer.Write(size);
 
+                writer.Write(fileName);
                 UnityEngine.Assertions.Assert.AreEqual(16, md5.Length);
 
                 writer.Write(md5);
@@ -499,7 +507,7 @@ namespace ZG
             }
         }*/
 
-        public const uint VERSION = 8;
+        public const uint VERSION = 9;
         public const string FILE_SUFFIX_ASSET_INFOS = ".info";
 
         private string __path;

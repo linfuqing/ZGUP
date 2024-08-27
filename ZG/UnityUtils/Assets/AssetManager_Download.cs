@@ -455,7 +455,7 @@ namespace ZG
                             if (assetData.info.size <= bytesDownloaded)
                                 bytesDownloaded = 0;
 
-                            assetPath = __writer.AssetManager.__GetAssetPath(assetName);
+                            assetPath = __writer.AssetManager.__GetAssetPath(string.IsNullOrEmpty(assetData.info.fileName) ? assetName : assetData.info.fileName);
 
                             if (bytesDownloaded == 0)
                             {
@@ -683,7 +683,7 @@ namespace ZG
             }
         }
 
-        public static void WriteAssetInfo(string assetPath, ref uint assetVersion)
+        public static void WriteAssetInfo(bool isAppendHashToAssetBundleName, string assetPath, ref uint assetVersion)
         {
             string assetDirectory = Path.GetDirectoryName(assetPath),
                 assetName = Path.GetFileName(assetPath),
@@ -713,6 +713,15 @@ namespace ZG
 
                 assetInfo.version = assetVersion;
 
+                if (isAppendHashToAssetBundleName)
+                {
+                    assetInfo.fileName = assetName;
+
+                    assetName = assetName.Remove(assetName.Length - 17);
+                }
+                else
+                    assetInfo.fileName = string.Empty;
+
                 assetInfo.md5 = md5.ComputeHash(File.ReadAllBytes(assetPath));
 
                 assetInfos[assetName] = assetInfo;
@@ -721,7 +730,7 @@ namespace ZG
             SaveAssetInfos(assetInfosPath, assetInfos);
         }
 
-        public static void UpdateAfterBuild(AssetBundleManifest source, AssetBundleManifest destination, string path, ref uint assetVersion)
+        public static void UpdateAfterBuild(bool isAppendHashToAssetBundleName, AssetBundleManifest source, AssetBundleManifest destination, string path, ref uint assetVersion)
         {
             string[] assetBundleNames = destination == null ? null : destination.GetAllAssetBundles();
             if (assetBundleNames == null)
@@ -739,20 +748,25 @@ namespace ZG
 
             var result = new Dictionary<string, AssetInfo>();
 
+            string assetName;
             AssetInfo assetInfo;
             using (var md5 = new MD5CryptoServiceProvider())
             {
                 assetInfo.version = 0;
                 foreach (string assetBundleName in assetBundleNames)
                 {
+                    assetName = isAppendHashToAssetBundleName ? assetBundleName.Remove(assetBundleName.Length - 17) : assetBundleName;
+                    
                     if (assetInfos != null && 
-                        assetInfos.TryGetValue(assetBundleName, out assetInfo))
+                        assetInfos.TryGetValue(assetName, out assetInfo))
                     {
-                        assetInfos.Remove(assetBundleName);
+                        assetInfos.Remove(assetName);
 
                         if (source != null && 
-                            source.GetAssetBundleHash(assetBundleName) == destination.GetAssetBundleHash(assetBundleName))
+                            source.GetAssetBundleHash(string.IsNullOrEmpty(assetInfo.fileName) ? assetName : assetInfo.fileName) == destination.GetAssetBundleHash(assetBundleName))
                         {
+                            assetInfo.fileName = isAppendHashToAssetBundleName ? assetBundleName : string.Empty;
+                            
                             result.Add(assetBundleName, assetInfo);
 
                             continue;
@@ -772,9 +786,11 @@ namespace ZG
 
                     assetInfo.version = assetVersion;
 
+                    assetInfo.fileName = isAppendHashToAssetBundleName ? assetBundleName : string.Empty;
+
                     assetInfo.md5 = md5.ComputeHash(File.ReadAllBytes(Path.Combine(path, assetBundleName)));
 
-                    result.Add(assetBundleName, assetInfo);
+                    result.Add(assetName, assetInfo);
                 }
             }
 
@@ -1237,7 +1253,7 @@ namespace ZG
 
                                 fullURL = url + assetName;
 
-                                filePath = __GetAssetPath(assetName);
+                                filePath = __GetAssetPath(string.IsNullOrEmpty(destination.info.fileName) ? assetName : destination.info.fileName);
                                 CreateDirectory(filePath);
 
                                 using (var downloadHandlerFile = new DownloadHandlerFile(filePath))
@@ -1344,7 +1360,8 @@ namespace ZG
                                 asset = assets[i];
 
                                 assetName = asset.Key;
-                                if (!pack.GetFileInfo(assetName, out fileOffset, out filePath))
+                                filePath = asset.Value.data.info.fileName;
+                                if (!pack.GetFileInfo(string.IsNullOrEmpty(filePath) ? assetName : filePath, out fileOffset, out filePath))
                                     continue;
 
                                 fileOffsetsAndPaths.Add(assetName, (fileOffset, filePath));
