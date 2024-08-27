@@ -717,7 +717,7 @@ namespace ZG
                 {
                     assetInfo.fileName = assetName;
 
-                    assetName = assetName.Remove(assetName.Length - 17);
+                    assetName = assetName.Remove(assetName.Length - 33);
                 }
                 else
                     assetInfo.fileName = string.Empty;
@@ -755,7 +755,7 @@ namespace ZG
                 assetInfo.version = 0;
                 foreach (string assetBundleName in assetBundleNames)
                 {
-                    assetName = isAppendHashToAssetBundleName ? assetBundleName.Remove(assetBundleName.Length - 17) : assetBundleName;
+                    assetName = isAppendHashToAssetBundleName ? assetBundleName.Remove(assetBundleName.Length - 33) : assetBundleName;
                     
                     if (assetInfos != null && 
                         assetInfos.TryGetValue(assetName, out assetInfo))

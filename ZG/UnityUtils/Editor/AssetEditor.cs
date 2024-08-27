@@ -98,7 +98,7 @@ namespace ZG
             AssetManager assetManager = new AssetManager(Path.Combine(directoryName, Path.GetFileName(directoryName)));
 
             uint version = AssetEditor.version;
-            assetManager.Update(isAppendHashToName, Path.GetFileName(path), ref version);
+            assetManager.Update(isAppendHashToName ? Hash128.Parse(report.summary.guid.ToString()) : default, Path.GetFileName(path), ref version);
             AssetEditor.version = version;
 
             EditorUtility.RevealInFinder(path);
@@ -131,7 +131,7 @@ namespace ZG
             AssetManager assetManager = new AssetManager(Path.Combine(directoryName, Path.GetFileName(directoryName)));
             
             uint version = AssetEditor.version;
-            assetManager.Update(isAppendHashToName, Path.GetFileName(path), ref version);
+            assetManager.Update(isAppendHashToName ? Hash128.Parse(report.summary.guid.ToString()) : default, Path.GetFileName(path), ref version);
             AssetEditor.version = version;
 
             EditorUtility.RevealInFinder(path);
@@ -183,7 +183,7 @@ namespace ZG
 
                 minVersion = version;
 
-                assetManager.Update(isAppendHashToName, assetPath, ref minVersion);
+                assetManager.Update(isAppendHashToName ? Hash128.Parse(report.summary.guid.ToString()) : default, assetPath, ref minVersion);
 
                 maxVersion = Math.Max(maxVersion, minVersion);
             }

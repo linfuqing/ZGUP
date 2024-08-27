@@ -382,7 +382,7 @@ namespace ZG
             }
         }
 
-        public void Update(bool isAppendHashToName, string name, ref uint minVersion)
+        public void Update(in Hash128 guid, string name, ref uint minVersion)
         {
             string directoryName = Path.GetDirectoryName(__path);
             if (version < 1)
@@ -431,13 +431,13 @@ namespace ZG
                 using (var md5 = new MD5CryptoServiceProvider())
                     data.info.md5 = md5.ComputeHash(File.ReadAllBytes(path));
 
-                data.info.fileName = isAppendHashToName ? $"{name}_{BitConverter.ToString(data.info.md5)}" : string.Empty;
+                data.info.fileName = guid.isValid ? $"{name}_{guid.ToString().Replace("-", string.Empty)}" : string.Empty;
 
                 //__Create(name, data);
                 using (var writer = new Writer(string.Empty, this))
                     writer.Write(name, data);
 
-                if (isAppendHashToName)
+                if (!string.IsNullOrEmpty(data.info.fileName))
                 {
                     string filePath = Path.Combine(directoryName, data.info.fileName);
                     if(File.Exists(filePath))
