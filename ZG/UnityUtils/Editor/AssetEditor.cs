@@ -98,7 +98,7 @@ namespace ZG
             AssetManager assetManager = new AssetManager(Path.Combine(directoryName, Path.GetFileName(directoryName)));
 
             uint version = AssetEditor.version;
-            assetManager.Update(isAppendHashToName ? Hash128.Parse(report.summary.guid.ToString()) : default, Path.GetFileName(path), ref version);
+            assetManager.Update(isAppendHashToName ? NewHash()/*Hash128.Parse(report.summary.guid.ToString())*/ : default, Path.GetFileName(path), ref version);
             AssetEditor.version = version;
 
             EditorUtility.RevealInFinder(path);
@@ -131,7 +131,7 @@ namespace ZG
             AssetManager assetManager = new AssetManager(Path.Combine(directoryName, Path.GetFileName(directoryName)));
             
             uint version = AssetEditor.version;
-            assetManager.Update(isAppendHashToName ? Hash128.Parse(report.summary.guid.ToString()) : default, Path.GetFileName(path), ref version);
+            assetManager.Update(isAppendHashToName ? NewHash()/*Hash128.Parse(report.summary.guid.ToString())*/ : default, Path.GetFileName(path), ref version);
             AssetEditor.version = version;
 
             EditorUtility.RevealInFinder(path);
@@ -183,7 +183,7 @@ namespace ZG
 
                 minVersion = version;
 
-                assetManager.Update(isAppendHashToName ? Hash128.Parse(report.summary.guid.ToString()) : default, assetPath, ref minVersion);
+                assetManager.Update(isAppendHashToName ? NewHash()/*Hash128.Parse(report.summary.guid.ToString())*/ : default, assetPath, ref minVersion);
 
                 maxVersion = Math.Max(maxVersion, minVersion);
             }
@@ -615,6 +615,12 @@ namespace ZG
             EditorPrefs.SetString(PATH, path);
 
             AssetManager.Package(path, true);
+        }
+
+        public static Hash128 NewHash()
+        {
+            var bytes = Guid.NewGuid().ToByteArray();
+            return new Hash128(BitConverter.ToUInt64(bytes, 0), BitConverter.ToUInt64(bytes, 8));
         }
 
         void OnGUI()

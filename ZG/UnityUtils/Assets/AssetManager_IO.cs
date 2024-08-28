@@ -413,7 +413,16 @@ namespace ZG
             {
                 AssetData data;
                 if (__assets != null && __assets.TryGetValue(name, out var asset))
+                {
                     data = asset.data;
+
+                    if (!string.IsNullOrEmpty(data.info.fileName) && data.info.fileName != name)
+                    {
+                        string filePath = Path.Combine(directoryName, data.info.fileName);
+                        if (File.Exists(filePath))
+                            File.Delete(filePath);
+                    }
+                }
                 else
                 {
                     data.info.version = 0;

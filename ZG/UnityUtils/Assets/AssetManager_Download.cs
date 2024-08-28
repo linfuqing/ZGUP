@@ -569,6 +569,8 @@ namespace ZG
         public const string FILE_SUFFIX_ASSET_CONFIG = ".json";
         public const string FILE_SUFFIX_ASSET_PACKAGE = ".pack";
 
+        public static string RemoveHashFromAssetName(string name) => name.Remove(name.Length - 33);
+
         public static AssetList LoadAssetList(string text)
         {
             if (!string.IsNullOrEmpty(text))
@@ -717,7 +719,7 @@ namespace ZG
                 {
                     assetInfo.fileName = assetName;
 
-                    assetName = assetName.Remove(assetName.Length - 33);
+                    assetName = RemoveHashFromAssetName(assetName);
                 }
                 else
                     assetInfo.fileName = string.Empty;
@@ -755,7 +757,7 @@ namespace ZG
                 assetInfo.version = 0;
                 foreach (string assetBundleName in assetBundleNames)
                 {
-                    assetName = isAppendHashToAssetBundleName ? assetBundleName.Remove(assetBundleName.Length - 33) : assetBundleName;
+                    assetName = isAppendHashToAssetBundleName ? RemoveHashFromAssetName(assetBundleName) : assetBundleName;
                     
                     if (assetInfos != null && 
                         assetInfos.TryGetValue(assetName, out assetInfo))
