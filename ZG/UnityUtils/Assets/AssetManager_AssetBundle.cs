@@ -2,18 +2,70 @@ using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
-using UnityEngine.Networking;
 
 namespace ZG
 {
+    public interface IAssetBundleAsyncRequest : IDisposable
+    {
+        bool isDone { get; }
+        
+        float progress { get; }
+        
+        AssetBundle assetBundle { get; }
+    }
+
+    public interface IAssetBundleFactory
+    {
+        IAssetBundleAsyncRequest LoadFromFileAsync(string path, ulong offset);
+        
+        AssetBundle LoadFromFile(string path, ulong offset);
+    }
+
+    public class AssetBundleAsyncRequest : IAssetBundleAsyncRequest
+    {
+        private AssetBundleCreateRequest __instance;
+
+        public bool isDone => __instance.isDone;
+
+        public float progress => __instance.progress;
+
+        public AssetBundle assetBundle => __instance.assetBundle;
+
+        public AssetBundleAsyncRequest(AssetBundleCreateRequest instance)
+        {
+            __instance = instance;
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    public class AssetBundleFactory : IAssetBundleFactory
+    {
+        public IAssetBundleAsyncRequest LoadFromFileAsync(string path, ulong offset)
+        {
+            var instance = AssetBundle.LoadFromFileAsync(path, 0, offset);
+
+            return new AssetBundleAsyncRequest(instance);
+        }
+
+        public AssetBundle LoadFromFile(string path, ulong offset)
+        {
+            return AssetBundle.LoadFromFile(path, 0, offset);
+        }
+    }
+    
     public class AssetBundleLoader : CustomYieldInstruction
     {
         private bool __isRecursive = false;
         private ulong __offset;
         private string __path;
         private AssetBundle __assetBundle = null;
-        private AssetBundleCreateRequest __createRequest = null;
+        private IAssetBundleAsyncRequest __createRequest = null;
+        private IAssetBundleFactory __factory;
         private AssetBundleLoader[] __dependencies;
 
         public Dictionary<(string, Type), AssetBundleRequest> assetBundleRequests;
@@ -60,7 +112,7 @@ namespace ZG
                     }
 
                     if (__createRequest == null)
-                        __createRequest = AssetBundle.LoadFromFileAsync(__path, 0, __offset);
+                        __createRequest = __factory.LoadFromFileAsync(__path, __offset);
 
                     return !__createRequest.isDone;
                 }
@@ -124,10 +176,11 @@ namespace ZG
 
         public AssetBundle assetBundle => __GetOrLoadSync();
 
-        public AssetBundleLoader(ulong offset, string path, AssetBundleLoader[] dependencies)
+        public AssetBundleLoader(ulong offset, [NotNull]string path, [NotNull]IAssetBundleFactory factory, AssetBundleLoader[] dependencies)
         {
             __offset = offset;
             __path = path;
+            __factory = factory;
             __dependencies = dependencies;
         }
 
@@ -244,7 +297,7 @@ namespace ZG
             }
 
             if (!isDone)
-                __assetBundle = AssetBundle.LoadFromFile(__path, 0, __offset);
+                __assetBundle = __factory.LoadFromFile(__path, __offset);
 
             return __assetBundle;
         }
@@ -491,40 +544,48 @@ namespace ZG
 
     public partial class AssetManager
     {
+        private IAssetBundleFactory __factory;
         private Dictionary<string, AssetBundleLoader> __assetBundleLoaders;
+
+        private AssetManager(IAssetBundleFactory factory)
+        {
+            __factory = factory;
+        }
 
         public AssetBundleLoader GetOrCreateAssetBundleLoader(string name)
         {
             if (__assetBundleLoaders != null && __assetBundleLoaders.TryGetValue(name, out var assetBundleLoader))
                 return assetBundleLoader;
+
+            if (GetAssetPath(name, out var asset, out ulong fileOffset, out string filePath))
+            {
+                if (__factory == null)
+                    __factory = new AssetBundleFactory();
+                
+                int numDependencies = asset.data.dependencies == null ? 0 : asset.data.dependencies.Length;
+                AssetBundleLoader[] dependencies = numDependencies > 0 ? new AssetBundleLoader[numDependencies] : null;
+
+                assetBundleLoader = new AssetBundleLoader(
+                    fileOffset,
+                    filePath,
+                    __factory,
+                    dependencies);
+
+                if (__assetBundleLoaders == null)
+                    __assetBundleLoaders = new Dictionary<string, AssetBundleLoader>();
+
+                __assetBundleLoaders[name] = assetBundleLoader;
+
+                for (int i = 0; i < numDependencies; ++i)
+                    dependencies[i] = GetOrCreateAssetBundleLoader(asset.data.dependencies[i]);
+
+            }
             else
             {
-                if (GetAssetPath(name, out var asset, out ulong fileOffset, out string filePath))
-                {
-                    int numDependencies = asset.data.dependencies == null ? 0 : asset.data.dependencies.Length;
-                    AssetBundleLoader[] dependencies = numDependencies > 0 ? new AssetBundleLoader[numDependencies] : null;
+                if (!string.IsNullOrEmpty(name))
+                    Debug.LogError($"Load Asset Bundle {name} Fail.");
 
-                    assetBundleLoader = new AssetBundleLoader(
-                        fileOffset,
-                        filePath,
-                        dependencies);
-
-                    if (__assetBundleLoaders == null)
-                        __assetBundleLoaders = new Dictionary<string, AssetBundleLoader>();
-
-                    __assetBundleLoaders[name] = assetBundleLoader;
-
-                    for (int i = 0; i < numDependencies; ++i)
-                        dependencies[i] = GetOrCreateAssetBundleLoader(asset.data.dependencies[i]);
-
-                }
-                else
-                {
-                    if (!string.IsNullOrEmpty(name))
-                        Debug.LogError($"Load Asset Bundle {name} Fail.");
-
-                    assetBundleLoader = null;
-                }
+                assetBundleLoader = null;
             }
 
             return assetBundleLoader;

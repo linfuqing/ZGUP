@@ -586,12 +586,7 @@ namespace ZG
             }
         }
 
-        private AssetManager()
-        {
-
-        }
-
-        public AssetManager(string path)
+        public AssetManager(string path, IAssetBundleFactory factory = null) : this(factory)
         {
             __path = path;
 

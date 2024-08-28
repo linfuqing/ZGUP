@@ -14,11 +14,11 @@ namespace ZG
                 return;
 
             string assetPath = null;
-            bool isPrefab = PrefabUtility.GetPrefabAssetType(value) != UnityEditor.PrefabAssetType.NotAPrefab;
+            bool isPrefab = PrefabUtility.GetPrefabAssetType(value) != PrefabAssetType.NotAPrefab;
             if (isPrefab)
             {
                 assetPath = AssetDatabase.GetAssetPath(value);
-                value = (T)PrefabUtility.InstantiateAttachedAsset(value);
+                value = (T)PrefabUtility.InstantiatePrefab(value);
             }
 
             EditorApplication.CallbackFunction delayCall = null;
@@ -26,7 +26,7 @@ namespace ZG
             {
                 EditorApplication.delayCall -= delayCall;
 
-                if (PrefabUtility.GetPrefabInstanceStatus(value) != UnityEditor.PrefabInstanceStatus.NotAPrefab)
+                if (PrefabUtility.GetPrefabInstanceStatus(value) != PrefabInstanceStatus.NotAPrefab)
                 {
                     var target = PrefabUtility.GetCorrespondingObjectFromSourceAtPath(value, assetPath);
 
