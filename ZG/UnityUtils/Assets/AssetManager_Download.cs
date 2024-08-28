@@ -1668,7 +1668,7 @@ namespace ZG
             {
                 assetName = assetInfo.Key;
                 fileName = assetInfo.Value.fileName;
-                fileName = string.IsNullOrEmpty(fileName) ? assetName : fileName;
+                fileName = GetFilePath(assetName, fileName);
                 assetNames[fileName] = assetName;
             }
 
