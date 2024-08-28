@@ -472,7 +472,7 @@ namespace ZG
             using (var writer = new Writer(folder, this))
                 writer.Save();
 
-            File.WriteAllBytes(__GetAssetPath(string.IsNullOrEmpty(asset.data.info.fileName) ? name : asset.data.info.fileName), bytes);
+            File.WriteAllBytes(__GetAssetPath(name, asset.data.info.fileName), bytes);
             
             asset.data.type = AssetType.UncompressedRuntime;
             asset.data.pack = AssetPack.Default;
@@ -487,7 +487,7 @@ namespace ZG
             if (__assets == null || !__assets.Remove(name, out var asset))
                 return false;
 
-            using (var fileStream = File.OpenWrite(__GetAssetPath(string.IsNullOrEmpty(asset.data.info.fileName) ? name : asset.data.info.fileName)))
+            using (var fileStream = File.OpenWrite(__GetAssetPath(name, asset.data.info.fileName)))
             {
                 var folder = Path.GetDirectoryName(name);
                 using (var writer = new Writer(folder, this))
@@ -527,7 +527,7 @@ namespace ZG
                     return true;*/
 
                 if (!asset.data.isReadOnly)
-                    File.Delete(__GetAssetPath(string.IsNullOrEmpty(asset.data.info.fileName) ? name : asset.data.info.fileName));
+                    File.Delete(__GetAssetPath(name, asset.data.info.fileName));
 
                 return true;
             }

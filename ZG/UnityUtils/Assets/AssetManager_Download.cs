@@ -455,7 +455,7 @@ namespace ZG
                             if (assetData.info.size <= bytesDownloaded)
                                 bytesDownloaded = 0;
 
-                            assetPath = __writer.AssetManager.__GetAssetPath(string.IsNullOrEmpty(assetData.info.fileName) ? assetName : assetData.info.fileName);
+                            assetPath = __writer.AssetManager.__GetAssetPath(assetName, assetData.info.fileName);
 
                             if (bytesDownloaded == 0)
                             {
@@ -1278,9 +1278,9 @@ namespace ZG
                                 assetName = asset.Key;
                                 destination = asset.Value.data;
 
-                                fullURL = url + (string.IsNullOrEmpty(destination.info.fileName) ? assetName : destination.info.fileName);
+                                fullURL = url + GetFilePath(assetName, destination.info.fileName);
 
-                                filePath = __GetAssetPath(assetName);
+                                filePath = __GetAssetPath(assetName, null);
                                 CreateDirectory(filePath);
 
                                 using (var downloadHandlerFile = new DownloadHandlerFile(filePath))
@@ -1389,8 +1389,7 @@ namespace ZG
                                 asset = assets[i];
 
                                 assetName = asset.Key;
-                                filePath = asset.Value.data.info.fileName;
-                                if (!pack.GetFileInfo(string.IsNullOrEmpty(filePath) ? assetName : filePath, out fileOffset, out filePath))
+                                if (!pack.GetFileInfo(GetFilePath(assetName, asset.Value.data.info.fileName), out fileOffset, out filePath))
                                     continue;
 
                                 fileOffsetsAndPaths.Add(assetName, (fileOffset, filePath));
