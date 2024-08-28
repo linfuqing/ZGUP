@@ -1,15 +1,15 @@
+#if !UNITY_WEBGL
+#define ASSET_MANAGER_USE_TASK
+#endif
+
 using System;
 using System.IO;
-using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.Networking;
-using UnityEngine.Scripting;
-using System.Linq;
 
 namespace ZG
 {
@@ -995,8 +995,11 @@ namespace ZG
                 int numAssetNamesToDelete = assetNamesToDelete.Count;
                 index = 0;
                 assetName = null;
+                
+#if ASSET_MANAGER_USE_TASK
                 using (var task = Task.Run(() =>
                      {
+#endif
                          do
                          {
                              try
@@ -1004,6 +1007,18 @@ namespace ZG
                                  assetName = assetNamesToDelete[index];
 
                                  __Delete(assetName);
+                                 
+#if !ASSET_MANAGER_USE_TASK
+                                 if(handler != null)
+                                     handler(
+                                         assetName,
+                                         0.0f,
+                                         0,
+                                         0,
+                                         size,
+                                         index,
+                                         numAssetNamesToDelete);
+#endif
                              }
                              catch (Exception e)
                              {
@@ -1011,6 +1026,8 @@ namespace ZG
                              }
 
                          } while (++index < numAssetNamesToDelete);
+                         
+#if ASSET_MANAGER_USE_TASK
                      }))
                 {
                     do
@@ -1034,6 +1051,7 @@ namespace ZG
                         }
                     } while (!task.IsCompleted);
                 }
+#endif
 
                 assetNamesToDelete = null;
 
@@ -1183,15 +1201,21 @@ namespace ZG
 
                                             packDownloadedBytes = (ulong)Math.Round(packSize * (double)pack.downloadProgress);
 
+#if ASSET_MANAGER_USE_TASK
                                             using (var task = Task.Run(() =>
                                              {
+#endif
                                                  isDownloading = downloadFileHandler.ReceiveData((int)(packDownloadedBytes - oldPackDownloadedBytes));
+#if ASSET_MANAGER_USE_TASK
                                              }))
                                             {
+
                                                 do
                                                 {
-                                                    yield return null;
 
+                                                    yield return null;
+#endif
+                                                    
                                                     if (handler != null)
                                                     {
                                                         downloadedBytes = downloadFileHandler.bytesDownloaded;
@@ -1205,7 +1229,7 @@ namespace ZG
                                                             totalAssetIndex + downloadFileHandler.assetCount,
                                                             numAssets);
                                                     }
-
+#if ASSET_MANAGER_USE_TASK
                                                     exception = task.Exception;
                                                     if (exception != null)
                                                     {
@@ -1217,6 +1241,7 @@ namespace ZG
                                                     }
                                                 } while (!task.IsCompleted);
                                             }
+#endif
 
                                             oldPackDownloadedBytes = packDownloadedBytes;
                                         } while (isDownloading);
@@ -1381,15 +1406,36 @@ namespace ZG
                                 downloadedBytes = 0;
 
                                 packDownloadedBytes = packSize > 0 ? (ulong)Math.Round(packSize * pack.downloadProgress) : ulong.MaxValue;
-
+                                
+#if ASSET_MANAGER_USE_TASK
                                 using (var task = Task.Run(() =>
                                      {
+#endif
                                          while (assetIndex < assetCount)
                                          {
                                              asset = assets[assetIndex];
 
                                              assetName = asset.Key;
-
+                                                 
+#if !ASSET_MANAGER_USE_TASK
+                                             try
+                                             {
+                                                 if (handler != null)
+                                                     handler(
+                                                         assetName,
+                                                         pack.downloadProgress,
+                                                         (uint)downloadedBytes,
+                                                         Math.Min(totalBytesDownload + downloadedBytes, packDownloadedBytes),
+                                                         size,
+                                                         totalAssetIndex,
+                                                         numAssets);
+                                             }
+                                             catch (Exception e)
+                                             {
+                                                 Debug.LogError(e.InnerException ?? e);
+                                             }
+#endif
+                                             
                                              if (!fileOffsetsAndPaths.TryGetValue(assetName, out fileOffsetAndPath))
                                              {
                                                  Debug.LogError($"Asset pack {assetName} can not been found!");
@@ -1423,6 +1469,7 @@ namespace ZG
 
                                              ++assetIndex;
                                          }
+#if ASSET_MANAGER_USE_TASK
                                      }))
                                 {
                                     do
@@ -1460,6 +1507,7 @@ namespace ZG
                                     if (exception == null && !isForce)
                                         break;
                                 }
+#endif
                             } while (assetIndex < assetCount);
                         }
                         else

@@ -126,7 +126,7 @@ namespace ZG
                 writer.Write(version);
                 writer.Write(size);
 
-                writer.Write(fileName);
+                writer.Write(fileName ?? string.Empty);
                 UnityEngine.Assertions.Assert.AreEqual(16, md5.Length);
 
                 writer.Write(md5);
