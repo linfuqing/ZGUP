@@ -487,29 +487,42 @@ namespace ZG
             if (__assets == null || !__assets.Remove(name, out var asset))
                 return false;
 
-            using (var fileStream = File.OpenWrite(__GetAssetPath(name, asset.data.info.fileName)))
+            bool isSaved = false;
+            try
             {
-                var folder = Path.GetDirectoryName(name);
-                using (var writer = new Writer(folder, this))
-                    writer.Save();
-
-                int bytesToRead;
-                var buffer = new byte[bufferSize];
-                do
+                using (var fileStream = File.OpenWrite(__GetAssetPath(name, asset.data.info.fileName)))
                 {
-                    bytesToRead = stream.Read(buffer, 0, bufferSize);
-                    fileStream.Write(buffer, 0, bufferSize);
+                    var folder = Path.GetDirectoryName(name);
+                    using (var writer = new Writer(folder, this))
+                        writer.Save();
 
-                } while (bytesToRead > 0);
+                    isSaved = true;
 
-                //stream.CopyTo(fileStream);
+                    int bytesToRead;
+                    var buffer = new byte[bufferSize];
+                    do
+                    {
+                        bytesToRead = stream.Read(buffer, 0, bufferSize);
+                        fileStream.Write(buffer, 0, bufferSize);
 
-                asset.data.type = AssetType.UncompressedRuntime;
-                asset.data.pack = AssetPack.Default;
-                using (var writer = new Writer(folder, this))
-                    writer.Write(name, asset.data);
+                    } while (bytesToRead > 0);
 
-                return true;
+                    //stream.CopyTo(fileStream);
+
+                    asset.data.type = AssetType.UncompressedRuntime;
+                    asset.data.pack = AssetPack.Default;
+                    using (var writer = new Writer(folder, this))
+                        writer.Write(name, asset.data);
+
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                if (!isSaved)
+                    __assets[name] = asset;
+
+                throw e;
             }
         }
 
