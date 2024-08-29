@@ -27,7 +27,7 @@ namespace ZG
     public interface IAssetPack
     {
         bool isDone { get; }
-
+        
         float downloadProgress { get; }
 
         IAssetPackHeader header { get; }
@@ -853,7 +853,7 @@ namespace ZG
             foreach (var path in paths)
             {
                 packAssets = new Dictionary<string, Asset>();
-                yield return __Load(packAssets, path.url, path.folder, isForce);
+                yield return __Load(packAssets, path.url, path.folder, isForce | path.assetPack != null);
 
                 if (packAssets.Count < 1)
                     continue;
