@@ -277,7 +277,7 @@ namespace ZG
 
     public class Map<T> : Map<string, T>
     {
-        public Map() : base(NameHelper.MakeUnique)
+        public Map(IEqualityComparer<string> comparer = null) : base(comparer, NameHelper.MakeUnique)
         {
 
         }
