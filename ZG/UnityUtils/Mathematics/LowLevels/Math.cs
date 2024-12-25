@@ -640,7 +640,7 @@ namespace ZG.Mathematics
             y = temp;
         }
 
-        public static void InterlockedAdd(ref float location, float value)
+        public static float InterlockedAdd(ref float location, float value)
         {
             UnityEngine.Assertions.Assert.IsFalse(math.isnan(location));
             //UnityEngine.Assertions.Assert.IsFalse(math.isfinite(location));
@@ -651,20 +651,25 @@ namespace ZG.Mathematics
             UnityEngine.Assertions.Assert.IsFalse(math.isinf(value));
 
             if (value == 0.0f)
-                return;
+                return location;
 
             float origin;
             do
             {
                 origin = location;
             } while (Interlocked.CompareExchange(ref location, origin + value, origin) != origin);
+
+            return origin + value;
         }
         
-        public static void InterlockedAdd(ref float3 location, in float3 value)
+        public static float3 InterlockedAdd(ref float3 location, in float3 value)
         {
-            InterlockedAdd(ref location.x, value.x);
-            InterlockedAdd(ref location.y, value.y);
-            InterlockedAdd(ref location.z, value.z);
+            float3 result;
+            result.x = InterlockedAdd(ref location.x, value.x);
+            result.y = InterlockedAdd(ref location.y, value.y);
+            result.z = InterlockedAdd(ref location.z, value.z);
+            
+            return result;
         }
     }
 }

@@ -17,8 +17,6 @@ namespace ZG
 
         }
 
-        private static Dictionary<string, UnityEngine.Object> __values;
-
         [SerializeField]
         internal T[] _values;
 
@@ -35,7 +33,7 @@ namespace ZG
 
         public static T Find(string key)
         {
-            return __values != null && __values.TryGetValue(key, out var value) ? __As(key, value) : default;
+            return ComponentManager._values != null && ComponentManager._values.TryGetValue(key, out var value) ? __As(key, value) : default;
         }
 
         protected void OnEnable()
@@ -45,15 +43,15 @@ namespace ZG
 
             if (_values != null && _values.Length > 0)
             {
-                if (__values == null)
-                    __values = new Dictionary<string, UnityEngine.Object>();
+                if (ComponentManager._values == null)
+                    ComponentManager._values = new Dictionary<string, UnityEngine.Object>();
 
                 string key;
                 foreach (var value in _values)
                 {
                     key = value.name;
 
-                    __values[key] = value;
+                    ComponentManager._values[key] = value;
 
                     if (onChanged != null)
                         onChanged(key, value);
@@ -62,8 +60,8 @@ namespace ZG
 
             if(_instances != null && _instances.Count > 0)
             {
-                if (__values == null)
-                    __values = new Dictionary<string, UnityEngine.Object>();
+                if (ComponentManager._values == null)
+                    ComponentManager._values = new Dictionary<string, UnityEngine.Object>();
 
                 string key;
                 UnityEngine.Object value;
@@ -72,7 +70,7 @@ namespace ZG
                     key = pair.Key;
                     value = pair.Value;
 
-                    __values[key] = value;
+                    ComponentManager._values[key] = value;
 
                     if (onChanged != null)
                         onChanged(key, __As(key, value));
@@ -89,9 +87,9 @@ namespace ZG
                 foreach (var value in _values)
                 {
                     name = value.name;
-                    if (__values.TryGetValue(name, out target) && 
+                    if (ComponentManager._values.TryGetValue(name, out target) && 
                         target == value && 
-                        __values.Remove(name))
+                        ComponentManager._values.Remove(name))
                     {
                         if(onChanged != null)
                             onChanged(value.name, default);
@@ -105,9 +103,9 @@ namespace ZG
                 foreach (var pair in _instances)
                 {
                     key = pair.Key;
-                    if (__values.TryGetValue(key, out target) &&
+                    if (ComponentManager._values.TryGetValue(key, out target) &&
                         target == pair.Value && 
-                        __values.Remove(key))
+                        ComponentManager._values.Remove(key))
                     {
                         if (onChanged != null)
                             onChanged(key, default);
@@ -125,6 +123,6 @@ namespace ZG
 
     public class ComponentManager : ComponentManager<Component>
     {
-
+        internal static Dictionary<string, UnityEngine.Object> _values;
     }
 }
