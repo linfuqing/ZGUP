@@ -592,7 +592,7 @@ namespace ZG
                 path = assetName;
             else
             {
-                string folder = Path.GetDirectoryName(fileName);
+                string folder = Path.GetDirectoryName(assetName);
                 path = string.IsNullOrEmpty(folder) ? fileName : Path.Combine(folder, fileName);
             }
             
