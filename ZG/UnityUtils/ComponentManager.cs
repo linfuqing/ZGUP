@@ -33,7 +33,7 @@ namespace ZG
 
         public static T Find(string key)
         {
-            return ComponentManager._values != null && ComponentManager._values.TryGetValue(key, out var value) ? __As(key, value) : default;
+            return ComponentManager._Values.TryGetValue(key, out var value) ? __As(key, value) : default;
         }
 
         protected void OnEnable()
@@ -43,15 +43,12 @@ namespace ZG
 
             if (_values != null && _values.Length > 0)
             {
-                if (ComponentManager._values == null)
-                    ComponentManager._values = new Dictionary<string, UnityEngine.Object>();
-
                 string key;
                 foreach (var value in _values)
                 {
                     key = value.name;
 
-                    ComponentManager._values[key] = value;
+                    ComponentManager._Values[key] = value;
 
                     if (onChanged != null)
                         onChanged(key, value);
@@ -60,9 +57,6 @@ namespace ZG
 
             if(_instances != null && _instances.Count > 0)
             {
-                if (ComponentManager._values == null)
-                    ComponentManager._values = new Dictionary<string, UnityEngine.Object>();
-
                 string key;
                 UnityEngine.Object value;
                 foreach (var pair in _instances)
@@ -70,7 +64,7 @@ namespace ZG
                     key = pair.Key;
                     value = pair.Value;
 
-                    ComponentManager._values[key] = value;
+                    ComponentManager._Values[key] = value;
 
                     if (onChanged != null)
                         onChanged(key, __As(key, value));
@@ -87,9 +81,9 @@ namespace ZG
                 foreach (var value in _values)
                 {
                     name = value.name;
-                    if (ComponentManager._values.TryGetValue(name, out target) && 
+                    if (ComponentManager._Values.TryGetValue(name, out target) && 
                         target == value && 
-                        ComponentManager._values.Remove(name))
+                        ComponentManager._Values.Remove(name))
                     {
                         if(onChanged != null)
                             onChanged(value.name, default);
@@ -103,9 +97,9 @@ namespace ZG
                 foreach (var pair in _instances)
                 {
                     key = pair.Key;
-                    if (ComponentManager._values.TryGetValue(key, out target) &&
+                    if (ComponentManager._Values.TryGetValue(key, out target) &&
                         target == pair.Value && 
-                        ComponentManager._values.Remove(key))
+                        ComponentManager._Values.Remove(key))
                     {
                         if (onChanged != null)
                             onChanged(key, default);
@@ -123,6 +117,6 @@ namespace ZG
 
     public class ComponentManager : ComponentManager<Component>
     {
-        internal static Dictionary<string, UnityEngine.Object> _values;
+        internal static readonly Dictionary<string, UnityEngine.Object> _Values = new Dictionary<string, UnityEngine.Object>();
     }
 }

@@ -227,10 +227,15 @@ namespace ZG
 
             if (assetBundleNames != null)
             {
+                bool isAppendHashToName = AssetEditor.isAppendHashToName;
+                string assetName;
                 AssetBundle assetBundle;
                 foreach (string assetBundleName in assetBundleNames)
                 {
-                    if (assetBundleName == fileName)
+                    assetName = isAppendHashToName
+                        ? AssetManager.RemoveHashFromAssetName(assetBundleName)
+                        : assetBundleName;
+                    if (assetName == fileName)
                         continue;
 
                     assetBundle = AssetBundle.LoadFromFile(Path.Combine(folder, assetBundleName));
@@ -242,7 +247,7 @@ namespace ZG
                     if (assetBundleBuild.assetNames == null || assetBundleBuild.assetNames.Length < 1)
                         continue;
 
-                    assetBundleBuild.assetBundleName = assetBundleName;
+                    assetBundleBuild.assetBundleName = assetName;
 
                     assetBundleBuilds.Add(assetBundleBuild);
                 }
@@ -304,10 +309,15 @@ namespace ZG
 
             if (assetBundleNames != null)
             {
+                bool isAppendHashToName = AssetEditor.isAppendHashToName;
+                string assetName;
                 AssetBundle assetBundle;
                 foreach (string assetBundleName in assetBundleNames)
                 {
-                    if (assetBundleBuilds.FindIndex(x => x.assetBundleName == assetBundleName) != -1)
+                    assetName = isAppendHashToName
+                        ? AssetManager.RemoveHashFromAssetName(assetBundleName)
+                        : assetBundleName;
+                    if (assetBundleBuilds != null && assetBundleBuilds.FindIndex(x => x.assetBundleName == assetName) != -1)
                         continue;
 
                     assetBundle = AssetBundle.LoadFromFile(Path.Combine(path, assetBundleName));
@@ -319,7 +329,7 @@ namespace ZG
                     if (assetBundleBuild.assetNames == null || assetBundleBuild.assetNames.Length < 1)
                         continue;
 
-                    assetBundleBuild.assetBundleName = assetBundleName;
+                    assetBundleBuild.assetBundleName = assetName;
 
                     if (assetBundleBuilds == null)
                         assetBundleBuilds = new List<AssetBundleBuild>();

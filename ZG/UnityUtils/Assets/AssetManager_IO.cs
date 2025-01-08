@@ -562,7 +562,7 @@ namespace ZG
                 var reader = new BinaryReader(stream);
                 {
                     version = reader.ReadUInt32();
-                    if (version < 0 || version > VERSION)
+                    if (version > VERSION)
                         return false;
 
                     if (version > 7)

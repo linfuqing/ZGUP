@@ -116,34 +116,32 @@ namespace ZG
 
                     return !__createRequest.isDone;
                 }
-                else
+                
+                if (isDone)
                 {
-                    if (isDone)
-                    {
-                        UnityEngine.Assertions.Assert.IsNull(__createRequest);
+                    UnityEngine.Assertions.Assert.IsNull(__createRequest);
 
-                        __assetBundle.Unload(true);
-                        UnityEngine.Object.Destroy(__assetBundle);
+                    __assetBundle.Unload(true);
+                    UnityEngine.Object.Destroy(__assetBundle);
 
-                        __assetBundle = null;
-                    }
-                    else if (__createRequest != null)
-                    {
-                        UnityEngine.Assertions.Assert.IsNull(__assetBundle);
-
-                        //if (__createRequest.isDone)
-                        {
-                            var assetBundle = __createRequest.assetBundle;
-                            assetBundle.Unload(true);
-                            UnityEngine.Object.Destroy(assetBundle);
-                            __createRequest = null;
-                        }
-                        /*else
-                            return true;*/
-                    }
-
-                    return false;
+                    __assetBundle = null;
                 }
+                else if (__createRequest != null)
+                {
+                    UnityEngine.Assertions.Assert.IsNull(__assetBundle);
+
+                    //if (__createRequest.isDone)
+                    {
+                        var assetBundle = __createRequest.assetBundle;
+                        assetBundle.Unload(true);
+                        UnityEngine.Object.Destroy(assetBundle);
+                        __createRequest = null;
+                    }
+                    /*else
+                        return true;*/
+                }
+
+                return false;
             }
         }
 
