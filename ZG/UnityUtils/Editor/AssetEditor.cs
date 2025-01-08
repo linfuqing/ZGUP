@@ -227,6 +227,8 @@ namespace ZG
 
             if (assetBundleNames != null)
             {
+                fileName = fileName.ToLower();
+                
                 bool isAppendHashToName = AssetEditor.isAppendHashToName;
                 string assetName;
                 AssetBundle assetBundle;
@@ -317,7 +319,7 @@ namespace ZG
                     assetName = isAppendHashToName
                         ? AssetManager.RemoveHashFromAssetName(assetBundleName)
                         : assetBundleName;
-                    if (assetBundleBuilds != null && assetBundleBuilds.FindIndex(x => x.assetBundleName == assetName) != -1)
+                    if (assetBundleBuilds != null && assetBundleBuilds.FindIndex(x => x.assetBundleName.ToLower() == assetName) != -1)
                         continue;
 
                     assetBundle = AssetBundle.LoadFromFile(Path.Combine(path, assetBundleName));
