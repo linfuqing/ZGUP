@@ -15,20 +15,22 @@ namespace ZG
         OnDemand
     }
 
-    public struct AndroidAssetPackLocation
+    /*public struct AndroidAssetPackFileLocation
     {
         public ulong offset;
 
         public string path;
 
-        public bool isVail => !string.IsNullOrEmpty(path);
+        public bool isVail => !string.IsNullOrEmpty(path) && File.Exists(path);
 
-        public AndroidAssetPackLocation(string path)
+        public AndroidAssetPackFileLocation(string packName, string packFilePath)
         {
             offset = 0;
-            this.path = AndroidAssetPacks.GetAssetPackPath(path);
+            path = AndroidAssetPacks.GetAssetPackPath(packName);
+            if(!string.IsNullOrEmpty(path))
+                path = Path.Combine(path, packFilePath);
         }
-    }
+    }*/
 
     public class AndroidAssetPackEnumerator : IAssetPackEnumerator
     {
@@ -58,17 +60,17 @@ namespace ZG
             private set;
         }
 
-        public AndroidAssetPackEnumerator(ulong locationSize, AndroidAssetPackLocation location, string targetPath)
+        public AndroidAssetPackEnumerator(ulong locationSize, ulong offset, string path, string targetPath)
         {
             Task = Task.Run(() =>
             {
-                using (var reader = File.OpenRead(location.path))
+                using (var reader = File.OpenRead(path))
                 using (var writer = File.OpenWrite(targetPath))
                 {
                     ulong offset = 0, step;
                     byte[] bytes = null;
 
-                    reader.Position = (long)location.offset;
+                    reader.Position = (long)offset;
 
                     do
                     {
@@ -112,7 +114,7 @@ namespace ZG
         {
             get
             {
-                return Operation.isDone;
+                return Operation == null || Operation.isDone;
             }
         }
 
@@ -120,7 +122,7 @@ namespace ZG
         {
             get
             {
-                return Operation.size;
+                return Operation == null ? 0 : Operation.size;
             }
         }
 
@@ -130,7 +132,7 @@ namespace ZG
 
         public static string GetName(string name) => NAME_PREFIX + name;
 
-        public AndroidAssetPackHeader(GetAssetPackStateAsyncOperation operation)
+        public AndroidAssetPackHeader(string name, GetAssetPackStateAsyncOperation operation)
         {
             Name = name;
             Operation = operation;
@@ -191,6 +193,13 @@ namespace ZG
             private set;
         }
 
+        public string path
+        {
+            get;
+
+            private set;
+        }
+
         public IAssetPackHeader header
         {
             get
@@ -206,14 +215,14 @@ namespace ZG
                         if (coreUnityAssetPackNames != null && coreUnityAssetPackNames.Length > 0)
                         {
                             Debug.Log("Begin GetAssetPackStateAsync");
-                            __header = new AndroidAssetPackHeader(AndroidAssetPacks.GetAssetPackStateAsync(coreUnityAssetPackNames));
+                            __header = new AndroidAssetPackHeader(Name, AndroidAssetPacks.GetAssetPackStateAsync(coreUnityAssetPackNames));
                             Debug.Log("End GetAssetPackStateAsync");
                         }
                     }
                     else
                     {
                         Debug.Log($"Begin GetAssetPackStateAsync {Name}");
-                        __header = new AndroidAssetPackHeader(AndroidAssetPacks.GetAssetPackStateAsync(new string[] { Name }));
+                        __header = new AndroidAssetPackHeader(Name, AndroidAssetPacks.GetAssetPackStateAsync(new string[] { Name }));
                         Debug.Log("End GetAssetPackStateAsync");
                     }
                 }
@@ -250,20 +259,17 @@ namespace ZG
             out ulong fileOffset,
             out string filePath)
         {
-            string path = GetLocationPath(IsOverridePath, Path, name);
-            var location = new AndroidAssetPackLocation(path);
-            if (!location.isVail)
+            fileOffset = 0;
+            
+            string path = GetLocationPath(IsOverridePath, Path, name), temp = __TryGetFilepath(path);
+            if (temp == null)
             {
-                Debug.LogError($"Get Asset Location Failed: {status}, {path}");
-
-                fileOffset = 0;
                 filePath = null;
 
                 return false;
             }
 
-            fileOffset = location.offset;
-            filePath = path;// location.Path;
+            filePath = path;//location.path;
 
             return true;
         }
@@ -304,14 +310,18 @@ namespace ZG
             }
             else
             {
-                if (new AndroidAssetPackLocation(GetLocationPath(isOverridePath, path, name)).isVail)
+#if UNITY_ANDROID && !UNITY_EDITOR
+                if (string.IsNullOrEmpty(AndroidAssetPacks.GetAssetPackPath(name)))
+                    AndroidAssetPacks.DownloadAssetPackAsync(new string[] { name }, __Callback);
+                else
+#endif
                 {
                     downloadProgress = 1.0f;
 
                     status = AndroidAssetPackStatus.Completed;
+                    
+                    path = AndroidAssetPacks.GetAssetPackPath(Name);
                 }
-                else
-                    AndroidAssetPacks.DownloadAssetPackAsync(new string[] { name }, __Callback);
 
                 AssetUtility.Register(AndroidAssetPackHeader.GetName(name), this);
             }
@@ -319,34 +329,35 @@ namespace ZG
 
         public bool Update(ref string filePath, ref ulong fileOffset)
         {
-            var location = new AndroidAssetPackLocation(filePath);
-            if (!location.isVail)
-            {
-                Debug.LogError($"Get Asset Location Failed: {status} : {filePath}");
-
-                return false;
-            }
-
-            filePath = location.path;
-            fileOffset = location.offset;
-
-            return true;
+            filePath = __TryGetFilepath(filePath);
+            
+            return filePath != null;
         }
 
         public IAssetPackEnumerator Copy(string targetPath, string filePath, ulong fileOffset)
         {
-            var location = new AndroidAssetPackLocation(filePath);
-            if (!location.isVail)
-            {
-                Debug.LogError($"Get Asset Location Failed: {status} : {filePath}");
-
+            filePath = __TryGetFilepath(filePath);
+            if (filePath == null)
                 return null;
-            }
 
             return new AndroidAssetPackEnumerator(
                 size, 
-                location, 
+                fileOffset, 
+                filePath, 
                 targetPath);
+        }
+
+        private string __TryGetFilepath(string filePath)
+        {
+            string path = string.IsNullOrEmpty(this.path) ? null : System.IO.Path.Combine(this.path, filePath);
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                Debug.LogError($"Get Asset Location Failed: {status}, {Name} : {filePath}, {path}");
+
+                return null;
+            }
+            
+            return path;
         }
 
         private void __Callback(AndroidAssetPackInfo androidAssetPackInfo)
@@ -368,6 +379,8 @@ namespace ZG
                         downloadProgress = 1.0f;
 
                         size = androidAssetPackInfo.size;
+                        
+                        path = AndroidAssetPacks.GetAssetPackPath(Name);
 
                         break;
                     case AndroidAssetPackStatus.WaitingForWifi:
@@ -402,7 +415,6 @@ namespace ZG
                         }
                         break;
                     default:
-
                         Debug.LogError(status);
 
                         Application.Quit();
@@ -461,7 +473,6 @@ namespace ZG
 
         void Awake()
         {
-#if UNITY_ANDROID && !UNITY_EDITOR
             if(packs != null)
             {
                 Factory factory;
@@ -472,7 +483,6 @@ namespace ZG
                         AssetUtility.Register(filePath, factory);
                 }
             }
-#endif
         }
     }
 }
