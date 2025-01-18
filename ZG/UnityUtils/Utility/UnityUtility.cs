@@ -21,42 +21,6 @@ namespace ZG
 
     }
 
-    [System.Serializable]
-    public class ActiveEvent : UnityEngine.Events.UnityEvent<bool>
-    {
-
-    }
-
-    [System.Serializable]
-    public class StringEvent : UnityEngine.Events.UnityEvent<string>
-    {
-
-    }
-
-    [System.Serializable]
-    public class FloatEvent : UnityEngine.Events.UnityEvent<float>
-    {
-
-    }
-
-    [System.Serializable]
-    public class PointerEvent : UnityEngine.Events.UnityEvent<Vector2>
-    {
-
-    }
-
-    [System.Serializable]
-    public class IntEvent : UnityEngine.Events.UnityEvent<int>
-    {
-
-    }
-
-    [System.Serializable]
-    public class SpriteEvent : UnityEngine.Events.UnityEvent<Sprite>
-    {
-
-    }
-
     public static partial class UnityUtility
     {
         public readonly static Collider[] colliders = new Collider[256];
