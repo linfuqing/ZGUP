@@ -401,13 +401,13 @@ namespace ZG
 
             if (type.IsIndex())
             {
-                int result;
+                long result;
                 if (names == null)
-                    result = string.IsNullOrEmpty(name) ? 0 : int.Parse(name);
+                    result = string.IsNullOrEmpty(name) ? 0 : long.Parse(name);
                 else
                 {
                     result = -1;
-                    int index = 0;
+                    long index = 0;
                     foreach (string temp in names)
                     {
                         if (temp == name)
