@@ -364,6 +364,55 @@ namespace ZG
             return -1;
         }
 
+
+        [MenuItem("Assets/ZG/Replace Scene Selection with Prefab Asset")]
+        public static void ReplaceSelectedWithPrefabInstance(MenuCommand command)
+        {
+            GameObject prefabAsset = null;
+            var listOfInstanceRoots = new List<GameObject>();
+            var listOfPlainGameObjects = new List<GameObject>();
+            foreach (var go in Selection.gameObjects)
+            {
+                if (AssetDatabase.Contains(go))
+                    prefabAsset = go;
+                else if (PrefabUtility.IsOutermostPrefabInstanceRoot(go))
+                    listOfInstanceRoots.Add(go);
+                else if (!PrefabUtility.IsPartOfNonAssetPrefabInstance(go))
+                    listOfPlainGameObjects.Add(go);
+            }
+
+            if (prefabAsset == null || (listOfInstanceRoots.Count == 0 && listOfPlainGameObjects.Count == 0))
+            {
+                var helptext =
+                    "Please make a multiselection with at least one Prefab instance root or plain GameObject in the Scene and one Prefab Asset from the Project Browser. \n\nUse Ctrl/Cmd + Click.";
+                EditorUtility.DisplayDialog("Replace Prefab Asset of Prefab instance",
+                    (prefabAsset == null ? "Prefab Asset missing.\n\n" : "Prefab instance missing.\n\n") + helptext,
+                    "OK");
+                return;
+            }
+
+            if (listOfInstanceRoots.Count > 0)
+            {
+                var settings = new PrefabReplacingSettings
+                {
+                    logInfo = true,
+                    objectMatchMode = ObjectMatchMode.ByHierarchy,
+                    prefabOverridesOptions = PrefabOverridesOptions.ClearAllNonDefaultOverrides
+                };
+                PrefabUtility.ReplacePrefabAssetOfPrefabInstances(listOfInstanceRoots.ToArray(), prefabAsset, settings, InteractionMode.UserAction);
+            }
+
+            if (listOfPlainGameObjects.Count > 0)
+            {
+                var settings = new ConvertToPrefabInstanceSettings
+                {
+                    logInfo = true,
+                    objectMatchMode = ObjectMatchMode.ByHierarchy,
+                };
+                PrefabUtility.ConvertToPrefabInstances(listOfPlainGameObjects.ToArray(), prefabAsset, settings, InteractionMode.UserAction);
+            }
+        }
+        
         [MenuItem("GameObject/ZG/Print Dependencies")]
         public static void PrintDependencies(MenuCommand menuCommand)
         {
