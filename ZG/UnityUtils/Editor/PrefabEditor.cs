@@ -4,71 +4,86 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-public class PrefabEditor : EditorWindow
+namespace ZG
 {
-    public const string NAME_SPACE_ASSET_ROOT = "ZGPrefabEditor";
-    
-    [MenuItem("Window/ZG/PrefabEditor")]
-    public static void Show()
+    public class PrefabEditor : EditorWindow
     {
-        GetWindow<PrefabEditor>();
-    }
+        public const string NAME_SPACE_ASSET_ROOT = "ZGPrefabEditor";
 
-    void OnGUI()
-    {
-        var prefabAssetGUID = EditorPrefs.GetString(NAME_SPACE_ASSET_ROOT);
-        var prefabAssetPath = AssetDatabase.GUIDToAssetPath(prefabAssetGUID);
-        var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabAssetPath);
-        EditorGUI.BeginChangeCheck();
-        prefabAsset = EditorGUILayout.ObjectField("Prefab Asset Parent", prefabAsset, typeof(GameObject), false) as GameObject;
-        if (EditorGUI.EndChangeCheck())
+        [MenuItem("Window/ZG/Prefab Editor")]
+        public static void Show()
         {
-            prefabAssetPath = prefabAsset == null ? null : AssetDatabase.GetAssetPath(prefabAsset);
-            prefabAssetGUID = string.IsNullOrEmpty(prefabAssetPath) ? null : AssetDatabase.AssetPathToGUID(prefabAssetPath);
-            if (string.IsNullOrEmpty(prefabAssetGUID))
-                EditorPrefs.DeleteKey(NAME_SPACE_ASSET_ROOT);
-            else
-                EditorPrefs.SetString(NAME_SPACE_ASSET_ROOT, prefabAssetGUID);
+            GetWindow<PrefabEditor>();
         }
 
-        if (prefabAsset != null)
+        void OnGUI()
         {
-            var instanceRoots = new List<GameObject>();
-            foreach (var go in Selection.gameObjects)
+            var prefabAssetGUID = EditorPrefs.GetString(NAME_SPACE_ASSET_ROOT);
+            var prefabAssetPath = AssetDatabase.GUIDToAssetPath(prefabAssetGUID);
+            var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(prefabAssetPath);
+            EditorGUI.BeginChangeCheck();
+            prefabAsset =
+                EditorGUILayout.ObjectField("Prefab Asset Parent", prefabAsset, typeof(GameObject),
+                    false) as GameObject;
+            if (EditorGUI.EndChangeCheck())
             {
-                if (AssetDatabase.Contains(go))
-                    instanceRoots.Add(go);
+                prefabAssetPath = prefabAsset == null ? null : AssetDatabase.GetAssetPath(prefabAsset);
+                prefabAssetGUID = string.IsNullOrEmpty(prefabAssetPath)
+                    ? null
+                    : AssetDatabase.AssetPathToGUID(prefabAssetPath);
+                if (string.IsNullOrEmpty(prefabAssetGUID))
+                    EditorPrefs.DeleteKey(NAME_SPACE_ASSET_ROOT);
+                else
+                    EditorPrefs.SetString(NAME_SPACE_ASSET_ROOT, prefabAssetGUID);
             }
 
-            int numInstanceRoots = instanceRoots.Count;
-            if (numInstanceRoots > 0 && GUILayout.Button("Replace Prefab Asset Parent"))
+            if (prefabAsset != null)
             {
-                GameObject instanceRoot;
-                var paths = new string[numInstanceRoots];
-                for (int i = 0; i < numInstanceRoots; ++i)
+                var instanceRoots = new List<GameObject>();
+                foreach (var go in Selection.gameObjects)
                 {
-                    instanceRoot = instanceRoots[i];
-                    paths[i] = AssetDatabase.GetAssetPath(instanceRoot);
-                    
-                    instanceRoots[i] = (GameObject)PrefabUtility.InstantiatePrefab(instanceRoot);
+                    if (AssetDatabase.Contains(go))
+                        instanceRoots.Add(go);
                 }
 
-                var settings = new PrefabReplacingSettings
+                int numInstanceRoots = instanceRoots.Count;
+                if (numInstanceRoots > 0 && GUILayout.Button("Replace Prefab Asset Parent"))
                 {
-                    logInfo = true,
-                    objectMatchMode = ObjectMatchMode.ByHierarchy,
-                    prefabOverridesOptions = PrefabOverridesOptions.KeepAllPossibleOverrides
-                };
-                PrefabUtility.ReplacePrefabAssetOfPrefabInstances(instanceRoots.ToArray(), prefabAsset, settings,
-                    InteractionMode.AutomatedAction);
+                    GameObject instanceRoot;
+                    var paths = new string[numInstanceRoots];
+                    for (int i = 0; i < numInstanceRoots; ++i)
+                    {
+                        instanceRoot = instanceRoots[i];
+                        paths[i] = AssetDatabase.GetAssetPath(instanceRoot);
 
-                for (int i = 0; i < numInstanceRoots; ++i)
-                {
-                    instanceRoot = instanceRoots[i];
-                    
-                    PrefabUtility.SaveAsPrefabAsset(instanceRoot, paths[i]);
-                    
-                    DestroyImmediate(instanceRoot);
+                        instanceRoot = (GameObject)PrefabUtility.InstantiatePrefab(instanceRoot);
+
+                        PrefabUtility.UnpackPrefabInstance(instanceRoot, PrefabUnpackMode.Completely,
+                            InteractionMode.AutomatedAction);
+
+                        instanceRoots[i] = instanceRoot;
+                    }
+
+                    var settings = new ConvertToPrefabInstanceSettings()
+                    {
+                        logInfo = true,
+                        objectMatchMode = ObjectMatchMode.ByHierarchy,
+                        componentsNotMatchedBecomesOverride = true,
+                        gameObjectsNotMatchedBecomesOverride = true,
+                        recordPropertyOverridesOfMatches = true,
+                        changeRootNameToAssetName = false
+                    };
+                    PrefabUtility.ConvertToPrefabInstances(instanceRoots.ToArray(), prefabAsset, settings,
+                        InteractionMode.AutomatedAction);
+
+                    for (int i = 0; i < numInstanceRoots; ++i)
+                    {
+                        instanceRoot = instanceRoots[i];
+
+                        PrefabUtility.SaveAsPrefabAsset(instanceRoot, paths[i]);
+
+                        DestroyImmediate(instanceRoot);
+                    }
                 }
             }
         }
