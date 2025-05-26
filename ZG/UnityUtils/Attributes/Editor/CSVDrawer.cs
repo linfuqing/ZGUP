@@ -282,7 +282,7 @@ namespace ZG
             object[] parameters = null;
             string[] sources = lines, fields;
             List<string> result = null;
-            Queue<(object, FieldInfo)> objectFieldInfos = null;
+            Stack<(object, FieldInfo)> objectFieldInfos = null;
             Dictionary<int, int> indices = null;
             Dictionary<GameObject, Instance> instances = null;
             Dictionary<UnityEngine.Object, UnityEngine.Object> prefabs = null;
@@ -461,14 +461,14 @@ namespace ZG
                     continue;
 
                 if (objectFieldInfos == null)
-                    objectFieldInfos = new Queue<(object, FieldInfo)>();
+                    objectFieldInfos = new Stack<(object, FieldInfo)>();
                 else
                     objectFieldInfos.Clear();
 
                 if (objectFieldInfoWrapper == null)
                     objectFieldInfoWrapper = (target, fieldInfo) =>
                     {
-                        objectFieldInfos.Enqueue((target, fieldInfo));
+                        objectFieldInfos.Push((target, fieldInfo));
                     };
                 
                 path = propertyPath;
@@ -1189,7 +1189,7 @@ namespace ZG
                         try
                         {
                             object child = destination;
-                            while (objectFieldInfos.TryDequeue(out var objectFieldInfo))
+                            while (objectFieldInfos.TryPop(out var objectFieldInfo))
                             {
                                 parent = objectFieldInfo.Item1;
                                 
