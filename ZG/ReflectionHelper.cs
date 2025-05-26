@@ -91,7 +91,15 @@ namespace ZG
             return fieldInfo == null ? GetInheritedField(type.BaseType, name, bindingFlags) : fieldInfo;
         }
 
-        public static object Get(this object root, Action<object> visit, string path, int count, ref int startIndex, out int index, out FieldInfo fieldInfo, out object parent)
+        public static object Get(
+            this object root, 
+            Action<object, FieldInfo> visit, 
+            string path, 
+            int count, 
+            ref int startIndex, 
+            out int index, 
+            out FieldInfo fieldInfo, 
+            out object parent)
         {
             index = -1;
             fieldInfo = null;
@@ -107,9 +115,6 @@ namespace ZG
             {
                 if (result == null)
                     return null;
-
-                if (visit != null)
-                    visit(result);
 
                 endIndex = path.IndexOf('.', startIndex);
                 endIndex = endIndex == -1 ? pathLength : endIndex;
@@ -141,12 +146,13 @@ namespace ZG
                 }
 
                 type = result.GetType();
-                if (type == null)
-                    return null;
-
+                
                 fieldInfo = type.GetInheritedField(substring, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                 if (fieldInfo == null)
                     return null;
+
+                if (visit != null)
+                    visit(result, fieldInfo);
 
                 parent = result;
                 result = fieldInfo.GetValue(result);
@@ -173,10 +179,10 @@ namespace ZG
             return result;
         }
 
-        public static object Get(this object root, Action<object> visit, ref string path, out FieldInfo fieldInfo, out object parent)
+        public static object Get(this object root, Action<object, FieldInfo> visit, ref string path, out FieldInfo fieldInfo, out object parent)
         {
-            int count = path == null ? 0 : path.Length, startIndex = 0, index;
-            object target = root.Get(visit, path, count, ref startIndex, out index, out fieldInfo, out parent);
+            int count = path == null ? 0 : path.Length, startIndex = 0;
+            object target = root.Get(visit, path, count, ref startIndex, out _, out fieldInfo, out parent);
             if (startIndex < count)
                 path = path.Substring(startIndex);
 

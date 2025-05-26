@@ -282,9 +282,11 @@ namespace ZG
             object[] parameters = null;
             string[] sources = lines, fields;
             List<string> result = null;
+            Queue<(object, FieldInfo)> objectFieldInfos = null;
             Dictionary<int, int> indices = null;
             Dictionary<GameObject, Instance> instances = null;
             Dictionary<UnityEngine.Object, UnityEngine.Object> prefabs = null;
+            Action<object, FieldInfo> objectFieldInfoWrapper = null;
             foreach (UnityEngine.Object target in targets)
             {
                 type = target == null ? null : target.GetType();
@@ -458,8 +460,19 @@ namespace ZG
                 if (fields == null)
                     continue;
 
+                if (objectFieldInfos == null)
+                    objectFieldInfos = new Queue<(object, FieldInfo)>();
+                else
+                    objectFieldInfos.Clear();
+
+                if (objectFieldInfoWrapper == null)
+                    objectFieldInfoWrapper = (target, fieldInfo) =>
+                    {
+                        objectFieldInfos.Enqueue((target, fieldInfo));
+                    };
+                
                 path = propertyPath;
-                source = target.Get(ref path, out fieldInfo, out parent) as IList;
+                source = target.Get(objectFieldInfoWrapper, ref path, out fieldInfo, out parent) as IList;
                 if (fieldInfo != null)
                 {
                     type = fieldInfo.FieldType;
@@ -1175,7 +1188,17 @@ namespace ZG
 
                         try
                         {
-                            fieldInfo.SetValue(parent, destination);
+                            object child = destination;
+                            while (objectFieldInfos.TryDequeue(out var objectFieldInfo))
+                            {
+                                parent = objectFieldInfo.Item1;
+                                
+                                objectFieldInfo.Item2.SetValue(parent, child);
+
+                                child = parent;
+                            }
+                            
+                            //fieldInfo.SetValue(parent, destination);
                         }
                         catch (Exception e)
                         {
