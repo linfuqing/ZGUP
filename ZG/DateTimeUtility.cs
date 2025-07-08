@@ -22,7 +22,7 @@ namespace ZG
 
         public static bool IsToday(uint seconds)
         {
-            return GetTotalDays(seconds, out _, out _) > 0;
+            return Math.Abs(GetTotalDays(seconds, out _, out _)) < 1;
         }
 
         public static bool IsThisWeek(uint seconds)
