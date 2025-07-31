@@ -6,9 +6,22 @@ namespace ZG
     {
         public static readonly DateTime Utc1970 = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+        public static long GetTicks(uint seconds)
+        {
+            if (seconds == 0)
+                return 0;
+            
+            return seconds * TimeSpan.TicksPerSecond + Utc1970.Ticks;
+        }
+        
+        public static uint GetSeconds(long ticks)
+        {
+            return (uint)((ticks - Utc1970.Ticks) / TimeSpan.TicksPerSecond);
+        }
+
         public static uint GetSeconds()
         {
-            return (uint)((DateTime.UtcNow.Ticks - Utc1970.Ticks) / TimeSpan.TicksPerSecond);
+            return GetSeconds(DateTime.UtcNow.Ticks);
         }
 
         public static int GetTotalDays(uint seconds, out DateTime dateTime, out DateTime now)
@@ -31,8 +44,7 @@ namespace ZG
             if (totalDays < 7 && totalDays > -7)
             {
                 DayOfWeek dayOfWeek = dateTime.DayOfWeek, nowDayOfWeek = now.DayOfWeek;
-                if ((totalDays >= 0.0f) ^ (dayOfWeek >= nowDayOfWeek))
-                    return true;
+                return (totalDays < 0.0f) ^ (dayOfWeek >= nowDayOfWeek);
             }
 
             return false;
