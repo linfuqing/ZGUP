@@ -44,7 +44,7 @@ namespace ZG
             if (totalDays < 7 && totalDays > -7)
             {
                 DayOfWeek dayOfWeek = dateTime.DayOfWeek, nowDayOfWeek = now.DayOfWeek;
-                return (totalDays < 0.0f) ^ (dayOfWeek >= nowDayOfWeek);
+                return (totalDays > 0.0f) ^ (dayOfWeek >= nowDayOfWeek);
             }
 
             return false;
