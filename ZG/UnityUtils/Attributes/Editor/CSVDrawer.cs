@@ -1289,7 +1289,7 @@ namespace ZG
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            return EditorGUIUtility.singleLineHeight * 2.0f;
+            return EditorGUIUtility.singleLineHeight;// * 2.0f;
         }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -1311,7 +1311,11 @@ namespace ZG
 
                 AssetDatabase.StartAssetEditing();
 
-                Load(serializedObject.FindProperty(attribute.path), attribute.guidIndex, attribute.nameIndex, null, null, Load(ref path), null);
+                string propertyPath = property.propertyPath, 
+                    parentPath = EditorHelper.GetParentPath(propertyPath), 
+                    attributePath = parentPath == propertyPath ? attribute.path : $"{parentPath}.{attribute.path}";
+
+                Load(serializedObject.FindProperty(attributePath), attribute.guidIndex, attribute.nameIndex, null, null, Load(ref path), null);
 
                 AssetDatabase.StopAssetEditing();
                 AssetDatabase.SaveAssets();
@@ -1320,12 +1324,12 @@ namespace ZG
                 property.stringValue = path;
             }
 
-            position.y += singleLineHeight;
+            /*position.y += singleLineHeight;
             position.height = singleLineHeight;
             if (GUI.Button(position, "Save"))
             {
 
-            }
+            }*/
         }
 
         private static GameObject __GetPrefabRoot(UnityEngine.Object target, out bool isComponent)

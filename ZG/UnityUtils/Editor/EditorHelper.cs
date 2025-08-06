@@ -105,9 +105,14 @@ namespace ZG
             if (serializedObject == null)
                 return null;
 
-            string path = Regex.Replace(property.propertyPath, @".((\w+\d*)|(Array\.data\[[\d]+\]))$", "");
+            string path = GetParentPath(property.propertyPath);
 
             return serializedObject.FindProperty(path);
+        }
+
+        public static string GetParentPath(string propertyPath)
+        {
+            return Regex.Replace(propertyPath, @".((\w+\d*)|(Array\.data\[[\d]+\]))$", "");
         }
 
         public static string GetPropertyPath(string path)

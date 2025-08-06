@@ -11,11 +11,6 @@ namespace ZG
         Selection
     }
 
-    public interface IMaterialModifier
-    {
-        int Replace(Material source, Material destination);
-    }
-
     public interface IUISelectable
     {
 
@@ -102,57 +97,6 @@ namespace ZG
             }
 
             return bounds;
-        }
-
-        public static int Replace(this GameObject gameObject, Material source, Material destination)
-        {
-            if (gameObject == null)
-                return 0;
-
-            int count = 0;
-            Renderer[] renderers = gameObject.GetComponentsInChildren<Renderer>(true);
-            if (renderers != null)
-            {
-                bool isChanged;
-                int i, numMaterials;
-                Material material;
-                Material[] materials;
-                foreach (Renderer renderer in renderers)
-                {
-                    materials = renderer == null ? null : renderer.sharedMaterials;
-                    numMaterials = materials == null ? 0 : materials.Length;
-                    if (numMaterials < 1)
-                        continue;
-
-                    isChanged = false;
-                    for (i = 0; i < numMaterials; ++i)
-                    {
-                        material = materials[i];
-                        if (material != source)
-                            continue;
-
-                        materials[i] = destination;
-
-                        ++count;
-
-                        isChanged = true;
-                    }
-
-                    if (!isChanged)
-                        continue;
-
-                    renderer.sharedMaterials = materials;
-                }
-            }
-
-            var materialModifiers = gameObject.GetComponentsInChildren<IMaterialModifier>(true);
-            if(materialModifiers != null)
-            {
-                foreach (var materialModifier in materialModifiers)
-                    count += materialModifier.Replace(source, destination);
-            }
-
-            return count;
         }
 
         public static int IndexOfMinDistance(
