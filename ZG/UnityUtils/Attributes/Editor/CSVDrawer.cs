@@ -1313,7 +1313,7 @@ namespace ZG
 
                 string propertyPath = property.propertyPath, 
                     parentPath = EditorHelper.GetParentPath(propertyPath), 
-                    attributePath = parentPath == propertyPath ? attribute.path : $"{parentPath}.{attribute.path}";
+                    attributePath = string.IsNullOrEmpty(parentPath) || parentPath == propertyPath ? attribute.path : $"{parentPath}.{attribute.path}";
 
                 Load(serializedObject.FindProperty(attributePath), attribute.guidIndex, attribute.nameIndex, null, null, Load(ref path), null);
 
