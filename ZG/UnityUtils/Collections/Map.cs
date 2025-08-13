@@ -5,25 +5,6 @@ using System.Collections.Generic;
 
 namespace ZG
 {
-    public class MapAttribute : IndexAttribute
-    {
-        public int keyGuidIndex = 0;
-        public int keyNameIndex = 1;
-
-        public int valueGuidIndex = 0;
-        public int valueNameIndex = 1;
-
-        public MapAttribute() : base(null)
-        {
-
-        }
-
-        public MapAttribute(string path) : base(path)
-        {
-
-        }
-    }
-
     [Serializable]
     public class Map<TKey, TValue> : IDictionary<TKey, TValue>, ISerializationCallbackReceiver
     {
