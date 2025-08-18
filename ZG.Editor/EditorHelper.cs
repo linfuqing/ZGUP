@@ -12,6 +12,27 @@ namespace ZG
 {
     public static class EditorHelper
     {
+        public static Assembly[] loadedAssembliess
+        {
+            get
+            {
+                Assembly assembly = Assembly.Load("UnityEditor");
+                if (assembly != null)
+                {
+                    Type editorAssemblies = assembly.GetType("UnityEditor.EditorAssemblies");
+                    if (editorAssemblies != null)
+                    {
+                        var loadedAssemblies = editorAssemblies.GetMethod("get_loadedAssemblies", BindingFlags.NonPublic | BindingFlags.Static);
+                        var assemblies = loadedAssemblies.Invoke(null, null) as Assembly[];
+
+                        return assemblies;
+                    }
+                }
+
+                return null;
+            }
+        }
+
         public static IEnumerable<Type> loadedTypes
         {
             get

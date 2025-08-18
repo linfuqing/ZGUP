@@ -26,7 +26,7 @@ namespace ZG
 
         public static int GetTotalDays(uint seconds, out DateTime dateTime, out DateTime now)
         {
-            dateTime = new DateTime(seconds * TimeSpan.TicksPerSecond + Utc1970.Ticks).ToLocalTime();
+            dateTime = new DateTime(GetTicks(seconds)).ToLocalTime();
 
             now = DateTime.Now;
 
@@ -44,7 +44,7 @@ namespace ZG
             if (totalDays < 7 && totalDays > -7)
             {
                 DayOfWeek dayOfWeek = dateTime.DayOfWeek, nowDayOfWeek = now.DayOfWeek;
-                return (totalDays > 0.0f) ^ (dayOfWeek >= nowDayOfWeek);
+                return (totalDays > 0) ^ (dayOfWeek >= nowDayOfWeek);
             }
 
             return false;

@@ -11,7 +11,7 @@ namespace ZG
         public const string NAME_SPACE_ASSET_ROOT = "ZGPrefabEditor";
 
         [MenuItem("Window/ZG/Prefab Editor")]
-        public static void Show()
+        public static void ShowWindow()
         {
             GetWindow<PrefabEditor>();
         }
