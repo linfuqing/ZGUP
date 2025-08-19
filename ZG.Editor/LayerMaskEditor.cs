@@ -89,8 +89,14 @@ namespace ZG
                     else if (Member is PropertyInfo property)
                         property.SetValue(Target, value, Indices);
 
-                    if (Target is Component target)
-                        PrefabUtility.RecordPrefabInstancePropertyModifications(target);
+                    if (Target is Component component)
+                    {
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(component);
+                        
+                        EditorUtility.SetDirty(component);//.transform.root.gameObject);
+                    }
+                    else if(Target is UnityEngine.Object target)
+                        EditorUtility.SetDirty(target);
                     else if (Parent != null)
                         Parent.value = Target;
                 }
@@ -117,26 +123,24 @@ namespace ZG
 
             public void OnGUI(Rect rect, bool active, bool focused)
             {
+                if (!__windowPosition.Contains(rect.position - __scrollPosition + __windowPosition.position))
+                    return;
+                
                 float width = rect.width /= 2.0f;
                 if (root.Target is UnityEngine.Object target)
                 {
-                    if (active != Selection.Contains(target))
-                    {
-                        var targets = Selection.objects;
-                        if(active)
-                            ArrayUtility.Add(ref targets, target);
-                        else
-                            ArrayUtility.Remove(ref targets, target);
-                        
-                        Selection.objects = targets;
-                    }
-                    
                     //if(focused)
                     //    Selection.activeObject = target;
+                    string path = String.Empty;
+                    if (target is Component component)
+                    {
+                        var transform = component.transform;
+                        path = transform.GetPath(transform.root);
+                    }
                     
-                    EditorGUI.ObjectField(rect, target, target.GetType(), false);
+                    EditorGUI.ObjectField(rect, path, target, target.GetType(), false);
                 }
-
+                
                 rect.x += width;
 
                 _OnGUI(rect, active, focused);
@@ -160,9 +164,11 @@ namespace ZG
 
                     if(stringBuilder != null)
                         stringBuilder.Append(']');
+                    
+                    return $"{Parent}{stringBuilder}";
                 }
                 
-                return stringBuilder == null ? $"{Parent}.{Member.Name}" : $"{Parent}{stringBuilder}{Member.Name}";
+                return $"{Parent}.{Member.Name}";
             }
 
             protected virtual void _OnGUI(Rect rect, bool active, bool focused)
@@ -174,6 +180,8 @@ namespace ZG
         private class LayerMaskValue : Value
         {
             public readonly MemberInfo MemberExclude;
+
+            public readonly static HashSet<LayerMaskValue> Toggles = new HashSet<LayerMaskValue>();
 
             public LayerMaskValue(
                 object[] indices, 
@@ -209,11 +217,25 @@ namespace ZG
 
             protected override void _OnGUI(Rect rect, bool active, bool focused)
             {
+                float width = rect.width / 10.0f;
+                rect.width = width * 9.0f;
                 //rect.x += (rect.width /= 3.0f) * 2.0f;
                 EditorGUI.BeginChangeCheck();
                 var layerMask = LayerMaskField(rect, (LayerMask)value, new GUIContent(ToString()));
                 if (EditorGUI.EndChangeCheck())
                     value = layerMask;
+                
+                rect.x += rect.width;
+                rect.width = width;
+                EditorGUI.BeginChangeCheck();
+                bool toggle = EditorGUI.Toggle(rect, Toggles.Contains(this));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    if (toggle)
+                        Toggles.Add(this);
+                    else
+                        Toggles.Remove(this);
+                }
             }
 
             public static HashSet<object> CreateTargets()
@@ -404,20 +426,30 @@ namespace ZG
                 label
             });
         }
+        
+        private static Rect __windowPosition;
+        private static Vector2 __scrollPosition;
+        private List<Component> __components;
+        private LayerMask __layerMask;
 
         void OnGUI()
         {
+            __windowPosition = position;
+            
             __layerMaskInclude = LayerMaskFieldLayout(__layerMaskInclude, new GUIContent("Include"));
             __layerMaskExclude = LayerMaskFieldLayout(__layerMaskExclude, new GUIContent("Exclude"));
             if (GUILayout.Button("Refresh"))
             {
+                if (__components != null)
+                    __components.Clear();
+                
                 var targets = LayerMaskValue.CreateTargets();
                 var values = new List<Value>();
                 string[] guids = AssetDatabase.FindAssets("t:prefab");
                 Component[] components;
                 string path;
                 GameObject gameObject;
-                int numGuids = guids == null ? 0 : guids.Length;
+                int numValues, numGuids = guids == null ? 0 : guids.Length;
                 for (int i = 0; i < numGuids; ++i)
                 {
                     if (EditorUtility.DisplayCancelableProgressBar(title, i.ToString() + "/" + numGuids, i * 1.0f / numGuids))
@@ -431,7 +463,15 @@ namespace ZG
                     {
                         try
                         {
+                            numValues = values.Count;
                             LayerMaskValue.Create(__layerMaskInclude, __layerMaskExclude, component, null, null, values.Add, targets);
+                            if (values.Count > numValues)
+                            {
+                                if (__components == null)
+                                    __components = new List<Component>();
+                                
+                                __components.Add(component);
+                            }
                         }
                         catch (Exception e)
                         {
@@ -446,21 +486,69 @@ namespace ZG
                     values,
                     typeof(Value),
                     true,
-                    false,
+                    true,
                     false,
                     false);
                 __reorderableList.multiSelect = true;
                 
-                __reorderableList.elementHeightCallback += index => values[index].guiHeight;
+                __reorderableList.onSelectCallback += x =>
+                {
+                    int index = 0;
+                    var targets = new UnityEngine.Object[__reorderableList.selectedIndices.Count];
+                    foreach (var selectedIndex in __reorderableList.selectedIndices)
+                    {
+                        if (values[selectedIndex].root.Target is UnityEngine.Object target)
+                            targets[index++] = target;
+                    }
+
+                    Selection.objects = targets;
+                };
+
+                __reorderableList.drawHeaderCallback += rect =>
+                {
+                    rect.width /= 4.0f;
+
+                    if (GUI.Button(rect, "Select all"))
+                    {
+                        LayerMaskValue.Toggles.Clear();
+                        foreach (var value in values)
+                        {
+                            if (value is LayerMaskValue layerMaskValue)
+                                LayerMaskValue.Toggles.Add(layerMaskValue);
+                        }
+                    }
                     
+                    rect.x += rect.width;
+
+                    if (GUI.Button(rect, "Deselect all"))
+                        LayerMaskValue.Toggles.Clear();
+                    
+                    rect.x += rect.width;
+
+                    if (GUI.Button(rect, "Apply To"))
+                    {
+                        foreach (var toggle in LayerMaskValue.Toggles)
+                            toggle.value = __layerMask;
+                    }
+
+                    rect.x += rect.width;
+                    
+                    __layerMask = LayerMaskField(rect, __layerMask, GUIContent.none);
+                };
+                
                 __reorderableList.drawElementCallback += (rect, index, active, focused) =>
                 {
                     values[index].OnGUI(rect, active, focused);
                 };
+
+                __reorderableList.elementHeightCallback += index => values[index].guiHeight;
             }
 
+            __scrollPosition = EditorGUILayout.BeginScrollView(__scrollPosition);
             if (__reorderableList != null)
                 __reorderableList.DoLayoutList();
+
+            EditorGUILayout.EndScrollView();
         }
     }
 }
