@@ -126,7 +126,7 @@ namespace ZG
                 if (!__windowPosition.Contains(rect.position - __scrollPosition + __windowPosition.position))
                     return;
                 
-                float width = rect.width /= 2.0f;
+                float width = rect.width /= 4.0f;
                 if (root.Target is UnityEngine.Object target)
                 {
                     //if(focused)
@@ -142,6 +142,7 @@ namespace ZG
                 }
                 
                 rect.x += width;
+                rect.width = width * 3.0f;
 
                 _OnGUI(rect, active, focused);
             }
@@ -181,7 +182,7 @@ namespace ZG
         {
             public readonly MemberInfo MemberExclude;
 
-            public readonly static HashSet<LayerMaskValue> Toggles = new HashSet<LayerMaskValue>();
+            public static readonly HashSet<LayerMaskValue> Toggles = new HashSet<LayerMaskValue>();
 
             public LayerMaskValue(
                 object[] indices, 
@@ -486,7 +487,7 @@ namespace ZG
                     values,
                     typeof(Value),
                     true,
-                    true,
+                    false,
                     false,
                     false);
                 __reorderableList.multiSelect = true;
@@ -504,44 +505,46 @@ namespace ZG
                     Selection.objects = targets;
                 };
 
-                __reorderableList.drawHeaderCallback += rect =>
-                {
-                    rect.width /= 4.0f;
-
-                    if (GUI.Button(rect, "Select all"))
-                    {
-                        LayerMaskValue.Toggles.Clear();
-                        foreach (var value in values)
-                        {
-                            if (value is LayerMaskValue layerMaskValue)
-                                LayerMaskValue.Toggles.Add(layerMaskValue);
-                        }
-                    }
-                    
-                    rect.x += rect.width;
-
-                    if (GUI.Button(rect, "Deselect all"))
-                        LayerMaskValue.Toggles.Clear();
-                    
-                    rect.x += rect.width;
-
-                    if (GUI.Button(rect, "Apply To"))
-                    {
-                        foreach (var toggle in LayerMaskValue.Toggles)
-                            toggle.value = __layerMask;
-                    }
-
-                    rect.x += rect.width;
-                    
-                    __layerMask = LayerMaskField(rect, __layerMask, GUIContent.none);
-                };
-                
                 __reorderableList.drawElementCallback += (rect, index, active, focused) =>
                 {
                     values[index].OnGUI(rect, active, focused);
                 };
 
                 __reorderableList.elementHeightCallback += index => values[index].guiHeight;
+            }
+
+            if (__reorderableList != null)
+            {
+                var rect = GUILayoutUtility.GetRect(0.0f, __reorderableList.headerHeight, GUILayout.ExpandWidth(true));
+
+                rect.width /= 4.0f;
+
+                if (GUI.Button(rect, "Select all"))
+                {
+                    LayerMaskValue.Toggles.Clear();
+                    foreach (var value in __reorderableList.list)
+                    {
+                        if (value is LayerMaskValue layerMaskValue)
+                            LayerMaskValue.Toggles.Add(layerMaskValue);
+                    }
+                }
+
+                rect.x += rect.width;
+
+                if (GUI.Button(rect, "Deselect all"))
+                    LayerMaskValue.Toggles.Clear();
+
+                rect.x += rect.width;
+
+                if (GUI.Button(rect, "Apply To"))
+                {
+                    foreach (var toggle in LayerMaskValue.Toggles)
+                        toggle.value = __layerMask;
+                }
+
+                rect.x += rect.width;
+
+                __layerMask = LayerMaskField(rect, __layerMask, GUIContent.none);
             }
 
             __scrollPosition = EditorGUILayout.BeginScrollView(__scrollPosition);
