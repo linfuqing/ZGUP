@@ -30,7 +30,7 @@ namespace ZG
 
             now = DateTime.Now;
 
-            return (int)(now - dateTime).TotalDays;
+            return now.Day - dateTime.Day;
         }
 
         public static bool IsToday(uint seconds)
@@ -40,8 +40,8 @@ namespace ZG
 
         public static bool IsThisWeek(uint seconds)
         {
-            var totalDays = GetTotalDays(seconds, out var dateTime, out var now);
-            if (totalDays < 7 && totalDays > -7)
+            int totalDays = GetTotalDays(seconds, out var dateTime, out var now);
+            if (Math.Abs(totalDays) < 7)
             {
                 DayOfWeek dayOfWeek = dateTime.DayOfWeek, nowDayOfWeek = now.DayOfWeek;
                 return (totalDays > 0) ^ (dayOfWeek >= nowDayOfWeek);
@@ -52,8 +52,8 @@ namespace ZG
 
         public static bool IsThisMonth(uint seconds)
         {
-            var totalDays = GetTotalDays(seconds, out var dateTime, out var now);
-            return totalDays < 30 && totalDays > -30 && dateTime.Month == now.Month;
+            int totalDays = GetTotalDays(seconds, out var dateTime, out var now);
+            return Math.Abs(totalDays) < 30 && dateTime.Month == now.Month;
         }
     }
 }
