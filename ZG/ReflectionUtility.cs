@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace ZG
 {
-    public static class ReflectionHelper
+    public static class ReflectionUtility
     {
         public struct EqualityComparer : IEqualityComparer<object>
         {

@@ -471,7 +471,7 @@ namespace ZG
             GameObject rootGameObject;
             GameObject[] rootGameObjects;
             IEnumerable<KeyValuePair<Component, KeyValuePair<object, FieldInfo>>> results;
-            HashSet<object> temps = new HashSet<object>(new ReflectionHelper.EqualityComparer());
+            HashSet<object> temps = new HashSet<object>(new ReflectionUtility.EqualityComparer());
             for (i = 0; i < numTargets; ++i)
             {
                 temps.Clear();

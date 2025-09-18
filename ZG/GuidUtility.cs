@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace ZG
 {
-    public static class GuidHelper
+    public static class GuidUtility
     {
         public static int IndexOf(this IEnumerable<Guid> guids, Guid guid)
         {
