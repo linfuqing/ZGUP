@@ -509,7 +509,7 @@ namespace ZG.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 CalculateParabolaAngleAndTime(bool isNearst, float speed, float gravity, float distance, float height)
+        public static float2 CalculateParabolaAngleAndTime(bool isNear, float speed, float gravity, float distance, float height)
         {
             if (gravity > 0.0f)
             {
@@ -523,7 +523,7 @@ namespace ZG.Mathematics
                 delta = math.sqrt(delta) / gravityDistance;
                 float alpha = math.atan(sqrSpeed + delta);
                 float beta = math.atan(sqrSpeed - delta);
-                float theta = isNearst ? math.min(alpha, beta) : math.max(alpha, beta);
+                float theta = isNear ? math.min(alpha, beta) : math.max(alpha, beta);
                 float time = distance / (speed * math.cos(theta));
 
                 return new float2(theta, time);
@@ -537,19 +537,34 @@ namespace ZG.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float2 CalculateParabolaAngleAndTime(bool isNearst, float speed, float gravity, float3 distance, ref float3 direction)
+        public static float2 CalculateParabolaAngleAndTime(
+            bool isNear, 
+            float speed, 
+            in float3 gravity, 
+            ref float3 distance)
         {
-            if (math.abs(distance.x) < math.FLT_MIN_NORMAL)
-                return float2.zero;
+            float invLength = math.rsqrt(math.lengthsq(gravity));
+            float3 up = math.up();
+            quaternion rotation = FromToRotation(-invLength * gravity, up);
+            distance = math.mul(rotation, distance);
+            
+            float2 point;
+            if (math.abs(distance.x) > math.FLT_MIN_NORMAL)
+            {
+                quaternion axisAngle = quaternion.AxisAngle(up, -math.atan2(distance.x, distance.z));
+                point = math.mul(axisAngle, distance).zy;
+            }
+            else
+                point = distance.zy;
 
-            quaternion rotation = quaternion.AxisAngle(math.up(), -math.atan2(distance.x, distance.z));
-            float3 point = math.mul(rotation, distance);
-            float2 result = CalculateParabolaAngleAndTime(isNearst, speed, gravity, point.z, point.y);
+            float2 result = invLength > math.FLT_MIN_NORMAL
+                ? CalculateParabolaAngleAndTime(isNear, speed, math.rcp(invLength), point.x, point.y)
+                : float2.zero;
 
             if (result.y > 0.0f)
-                direction = math.normalize(new float3(distance.x, math.abs(point.z) * math.tan(result.x), distance.z));
-            else
-                direction = math.normalizesafe(distance, direction);
+                distance = new float3(distance.x, math.abs(point.x) * math.tan(result.x), distance.z);
+            
+            distance = math.mul(math.inverse(rotation), distance);
 
             return result;
         }
