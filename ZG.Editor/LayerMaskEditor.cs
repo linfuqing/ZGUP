@@ -453,7 +453,7 @@ namespace ZG
                 int numValues, numGuids = guids == null ? 0 : guids.Length;
                 for (int i = 0; i < numGuids; ++i)
                 {
-                    if (EditorUtility.DisplayCancelableProgressBar(title, i.ToString() + "/" + numGuids, i * 1.0f / numGuids))
+                    if (EditorUtility.DisplayCancelableProgressBar("Find Prefabs..", i.ToString() + "/" + numGuids, i * 1.0f / numGuids))
                         break;
 
                     path = AssetDatabase.GUIDToAssetPath(guids[i]);

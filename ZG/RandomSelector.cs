@@ -29,9 +29,18 @@ namespace ZG
             
             if (__totalChance > 1.0f)
             {
-                __totalChance -= 1.0f;
-                
+                if (!__isSelected)
+                {
+                    __isSelected = true;
+
+                    __totalChance = 1.0f;
+                    
+                    return true;
+                }
+
                 __currentRandomValue = __wrapper.NextFloat(ref random);
+
+                __totalChance -= 1.0f;
 
                 __isSelected = false;
             }
