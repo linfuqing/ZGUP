@@ -23,20 +23,24 @@ namespace ZG
         public bool Select(ref TRandom random, float chance)
         {
             if (chance < 1.0f)
+            {
                 __totalChance += chance;
+                if (__totalChance >= 1.0f && __totalChance - chance * 0.5f < 1.0f)
+                    __totalChance = __isSelected ? 1.0f : 2.0f;
+            }
             else
                 __totalChance = 2.0f;
             
             if (__totalChance > 1.0f)
             {
-                if (!__isSelected)
+                /*if (!__isSelected)
                 {
                     __isSelected = true;
 
                     __totalChance = 1.0f;
                     
                     return true;
-                }
+                }*/
 
                 __currentRandomValue = __wrapper.NextFloat(ref random);
 

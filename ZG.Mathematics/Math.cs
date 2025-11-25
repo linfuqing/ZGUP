@@ -17,7 +17,7 @@ namespace ZG.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetLowerstBit(byte value)
+        public static int GetLowestBit(byte value)
         {
             return GetHighestBit((byte)((value - 1) ^ value));
         }
@@ -35,13 +35,13 @@ namespace ZG.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetLowerstBit(uint value)
+        public static int GetLowestBit(uint value)
         {
             return GetHighestBit((value - 1) ^ value);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int GetLowerstBit(int value)
+        public static int GetLowestBit(int value)
         {
             return GetHighestBit((value - 1) ^ value);
         }
