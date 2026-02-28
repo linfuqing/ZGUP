@@ -46,7 +46,7 @@ namespace ZG
                     break;
             }
             
-            return now.Day - dateTime.Day;
+            return (int)(now.Ticks / TimeSpan.TicksPerDay - dateTime.Ticks / TimeSpan.TicksPerDay);
         }
 
         public static bool IsToday(uint seconds, DataTimeType type)
