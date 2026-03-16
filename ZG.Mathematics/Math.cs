@@ -47,6 +47,12 @@ namespace ZG.Mathematics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Approximately(this float2 x, float2 y)
+        {
+            return math.distancesq(x, y) < DISTANCE_SQ_EPSILON;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Approximately(this float3 x, float3 y)
         {
             return math.distancesq(x, y) < DISTANCE_SQ_EPSILON;
